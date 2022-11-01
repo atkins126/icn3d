@@ -127,7 +127,7 @@ class ShareLink {
                 if(key === 'showtitle' && value === true) continue;
                 if(key === 'showcommand' && value === true) continue;
 
-                if(key === 'simplemenu' && value === false) continue;
+                //if(key === 'simplemenu' && value === false) continue;
                 if(key === 'mobilemenu' && value === false) continue;
                 //if(key === 'closepopup' && value === false) continue;
                 if(key === 'showanno' && value === false) continue;
@@ -159,6 +159,13 @@ class ShareLink {
                    //url += key + '=' + value + '&';
                    paraHash[key] = value;
                }
+           }
+
+           if(ic.bAfMem) {
+            paraHash['afmem'] = 'on';
+           }
+           else {
+            paraHash['afmem'] = 'off';
            }
 
            let inparaWithoutCommand;

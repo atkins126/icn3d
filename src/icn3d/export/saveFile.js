@@ -314,7 +314,7 @@ class SaveFile {
     }
 
     //getAtomPDB: function(atomHash, bPqr, bPdb, bNoChem) { let ic = this.icn3d, me = ic.icn3dui;
-    getAtomPDB(atomHash, bPqr, bNoChem, bNoHeader, chainResi2pdb) { let ic = this.icn3d, me = ic.icn3dui;
+    getAtomPDB(atomHash, bPqr, bNoChem, bNoHeader, chainResi2pdb, pdbid) { let ic = this.icn3d, me = ic.icn3dui;
         let pdbStr = '';
 
         // get all phosphate groups in lipids
@@ -353,40 +353,49 @@ class SaveFile {
             stru2header[stru] = '';
         }
 
-        for(let i in calphaHash) {
-            let atom = ic.atoms[i];
-            let stru = atom.structure;
+//        if(!bNoSs) {
+            let prevResi, stru;
+            for(let i in calphaHash) {
+                let atom = ic.atoms[i];
+                stru = atom.structure;
 
-            if(atom.ssbegin) {
-                if(atom.ss == 'helix') {
-                    bHelixBegin = true;
-                    if(bHelixEnd) stru2header[stru] += helixStr.padEnd(15, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                        + atom.resi.toString().padStart(5, ' ');
-                    bHelixEnd = false;
+                if(atom.ssbegin) {
+                    if(atom.ss == 'helix') {
+                        bHelixBegin = true;
+                        if(bHelixEnd) stru2header[stru] += helixStr.padEnd(15, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                            + atom.resi.toString().padStart(5, ' ');
+                        bHelixEnd = false;
+                        prevResi = atom.resi;
+                    }
+                    else if(atom.ss == 'sheet') {
+                        bSheetBegin = true;
+                        if(bSheetEnd) stru2header[stru] += sheetStr.padEnd(17, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                            + atom.resi.toString().padStart(4, ' ');
+                        bSheetEnd = false;
+                    }
                 }
-                else if(atom.ss == 'sheet') {
-                    bSheetBegin = true;
-                    if(bSheetEnd) stru2header[stru] += sheetStr.padEnd(17, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                        + atom.resi.toString().padStart(4, ' ');
-                    bSheetEnd = false;
+
+                if(atom.ssend) {
+                    if(atom.ss == 'helix') {
+                        bHelixEnd = true;
+                        let helixLen = parseInt(atom.resi) - parseInt(prevResi);
+                        let helixType = 1;
+                        if(bHelixBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                            + atom.resi.toString().padStart(5, ' ') + '  ' + helixType + helixLen.toString().padStart(36, ' ') + '\n';
+                        bHelixBegin = false;
+                    }
+                    else if(atom.ss == 'sheet') {
+                        bSheetEnd = true;
+                        let sense = 0;
+                        if(bSheetBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                            + atom.resi.toString().padStart(4, ' ') + '  ' + sense + '\n';
+                        bSheetBegin = false;
+                    }
                 }
             }
-
-            if(atom.ssend) {
-                if(atom.ss == 'helix') {
-                    bHelixEnd = true;
-                    if(bHelixBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                        + atom.resi.toString().padStart(5, ' ') + '\n';
-                    bHelixBegin = false;
-                }
-                else if(atom.ss == 'sheet') {
-                    bSheetEnd = true;
-                    if(bSheetBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                        + atom.resi.toString().padStart(4, ' ') + '\n';
-                    bSheetBegin = false;
-                }
-            }
-        }
+            // add a new line in case the structure is a subset
+            stru2header[stru] += '\n';
+//        }
 
         // export assembly symmetry matrix "BIOMT"
         if(ic.biomtMatrices) {
@@ -403,40 +412,6 @@ class SaveFile {
                 }
             }
         }
-
- /*
-        // get missing residues
-        let ic.chainMissingResidueArray = {};
-        for(let chainid in ic.chainsSeq) {
-            let pos = chainid.indexOf('_');
-            let chain = chainid.substr(0, pos);
-
-            for(let i = 0, il = ic.chainsSeq[chainid].length; i < il; ++i) {
-                let resi = ic.chainsSeq[chainid][i].resi;
-                let resid = chainid + '_' + resi;
-                if(!ic.firstAtomObjCls.getFirstAtomObj(ic.residues[resid])) { // mising coordinate
-                    if(ic.chainMissingResidueArray[chainid] === undefined) ic.chainMissingResidueArray[chainid] = [];
-                    let seq = me.utilsCls.residueAbbr2Name(ic.chainsSeq[chainid][i].name);
-                    let resiObj = {'resi': resi, 'seq': seq};
-                    ic.chainMissingResidueArray[chainid].push(resiObj);
-                }
-            }
-        }
-
-        // add missing residues "REMARK 465..."
-        for(let chainid in ic.chainMissingResidueArray) {
-            let pos = chainid.indexOf('_');
-            let chain = chainid.substr(pos + 1, 2);
-            let stru = chainid.substr(0, pos);
-
-            for(let i = 0, il = ic.chainMissingResidueArray[chainid].length; i < il; ++i) {
-                let resi = ic.chainMissingResidueArray[chainid][i].resi;
-                let seq = ic.chainMissingResidueArray[chainid][i].seq;
-
-                stru2header[stru] += "REMARK 465     " + seq.padStart(3, " ") + chain.padStart(2, " ") + " " + resi.toString().padStart(5, " ") + "\n";
-            }
-        }
-*/
 
         // add missing residues "REMARK 465..."
         for(let chainid in ic.chainMissingResidueArray) {
@@ -463,15 +438,6 @@ class SaveFile {
         for(let i in atomHash) {
             let atom = ic.atoms[i];
 
-            let chainResi = atom.chain + '_' + atom.resi;
-            if(chainResi2pdb && chainResi2pdb.hasOwnProperty(chainResi)) {
-                if(!addedChainResiHash.hasOwnProperty(chainResi)) {
-                    pdbStr += chainResi2pdb[chainResi];
-                    addedChainResiHash[chainResi] = 1;
-                }
-                continue;
-            }
-
             // remove chemicals
             if(bNoChem && atom.het) continue;
 
@@ -486,10 +452,19 @@ class SaveFile {
 
                 // add header            
                 let mutantInfo = (chainResi2pdb) ? "Mutated chain_residue " + Object.keys(chainResi2pdb) + '; ' : '';
-                if(!bNoHeader) pdbStr += this.getPDBHeader(molNum - 1, stru2header, mutantInfo);
+                if(!bNoHeader) pdbStr += this.getPDBHeader(molNum - 1, stru2header, mutantInfo, pdbid);
 
                 prevStru = atom.structure;
                 ++molNum;
+            }
+
+            let chainResi = atom.chain + '_' + atom.resi;
+            if(chainResi2pdb && chainResi2pdb.hasOwnProperty(chainResi)) {
+                if(!addedChainResiHash.hasOwnProperty(chainResi)) {
+                    pdbStr += chainResi2pdb[chainResi];
+                    addedChainResiHash[chainResi] = 1;
+                }
+                continue;
             }
 
             let line = '';
@@ -569,7 +544,8 @@ class SaveFile {
             line += atom.coord.z.toFixed(3).toString().padStart(8, ' ');
 
             //if((bPqr && atom.het) ||(phosPHash.hasOwnProperty(i) && !bPdb) ||(phosOHash.hasOwnProperty(i) && !bPdb) ) {
-            if((bPqr && atom.het) ||(phosPHash.hasOwnProperty(i)) ||(phosOHash.hasOwnProperty(i)) ) {
+            //if((bPqr && atom.het) ||(phosPHash.hasOwnProperty(i)) ||(phosOHash.hasOwnProperty(i)) ) {
+            if(bPqr && atom.het) {
                 let size = 1.5, charge = 0;
 
     /*
@@ -714,11 +690,11 @@ class SaveFile {
 
        return pdbStr;
     }
-    getPDBHeader(struNum, stru2header, mutantInfo) { let ic = this.icn3d, me = ic.icn3dui;
+    getPDBHeader(struNum, stru2header, mutantInfo, pdbid) { let ic = this.icn3d, me = ic.icn3dui;
        if(struNum === undefined) struNum = 0;
 
        let pdbStr = '';
-       let stru = Object.keys(ic.structures)[struNum];
+       let stru = (pdbid) ? pdbid : Object.keys(ic.structures)[struNum];
        let id = (mutantInfo) ? stru + '2' : stru;
        pdbStr += 'HEADER    PDB From iCn3D'.padEnd(62, ' ') + id + '\n';
 
@@ -757,6 +733,8 @@ class SaveFile {
                 $("#" + ic.pre + "title").html("PubChem CID <a id='" + ic.pre + "titlelink' href='" + url + "' style='color:" + titlelinkColor + "' target='_blank'>" + ic.inputid.toUpperCase() + "</a>: " + title);
             }
             else if(me.cfg.align !== undefined) {
+                title = 'VAST+ alignment of ' + Object.keys(ic.structures);
+
                 $("#" + ic.pre + "title").html(title);
             }
             else if(me.cfg.chainalign !== undefined) {
@@ -767,26 +745,34 @@ class SaveFile {
             }
             else if(me.cfg.mmdbafid !== undefined) {
                 let structureArray = me.cfg.mmdbafid.split(',');
-                title = 'Multiple structures: ' + structureArray;
-
-                $("#" + ic.pre + "title").html(title);
+                if(structureArray.length > 1) {
+                    title = 'Multiple structures: ' + structureArray;
+                    $("#" + ic.pre + "title").html(title);
+                }
+                else if(structureArray.length == 1) {
+                    let url = this.getLinkToStructureSummary();
+                    this.setStructureTitle(url, title, titlelinkColor)
+                }
             }
             else {
                 let url = this.getLinkToStructureSummary();
-
-                if(ic.molTitle.length > 40) title = ic.molTitle.substr(0, 40) + "...";
-
-                //var asymmetricStr =(ic.bAssemblyUseAsu) ? "(Asymmetric Unit)" : "";
-                let asymmetricStr = "";
-
-                let idName = (me.cfg.afid) ? "AlphaFold UniProt ID" : "PDB ID";
-
-                $("#" + ic.pre + "title").html(idName + " <a id='" + ic.pre + "titlelink' href='" + url + "' style='color:" + titlelinkColor + "' target='_blank'>" + ic.inputid.toUpperCase() + "</a>" + asymmetricStr + ": " + title);
+                this.setStructureTitle(url, title, titlelinkColor);
             }
         }
         else {
             $("#" + ic.pre + "title").html("");
         }
+    }
+
+    setStructureTitle(url, title, titlelinkColor) {var ic = this.icn3d, me = ic.icn3dui;
+        if(ic.molTitle.length > 40) title = ic.molTitle.substr(0, 40) + "...";
+
+        //var asymmetricStr =(ic.bAssemblyUseAsu) ? "(Asymmetric Unit)" : "";
+        let asymmetricStr = "";
+
+        let idName = (isNaN(ic.inputid) && ic.inputid.length > 5) ? "AlphaFold ID" : "PDB ID";
+
+        $("#" + ic.pre + "title").html(idName + " <a id='" + ic.pre + "titlelink' href='" + url + "' style='color:" + titlelinkColor + "' target='_blank'>" + ic.inputid.toUpperCase() + "</a>" + asymmetricStr + ": " + title);
     }
 
     getLinkToStructureSummary(bLog) {var ic = this.icn3d, me = ic.icn3dui;

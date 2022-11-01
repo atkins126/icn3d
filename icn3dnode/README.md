@@ -3,7 +3,7 @@ Node.js Scripts based on iCn3D
 
 Either Python scripts in the directory "icn3dpython" or Node.js scripts in the directory "icn3dnode" can be used to analyze structures in command line.
 
-In your Node.js scripts, you can call iCn3D JavaScript functions in [icn3d npm package](https://www.npmjs.com/package/icn3d). You can then run these scripts in command line. Here show a few examples. 
+In your Node.js scripts, you can call iCn3D JavaScript functions in [icn3d npm package](https://www.npmjs.com/package/icn3d). You can then run these scripts in command line <b>with one second sleep time in between</b>. Here show a few examples. 
 
 Installation
 ------------
@@ -33,7 +33,7 @@ Examples
 
 * <b>Retrieve Annotations for PDB or AlphaFold Structures</b>
 
-    In the command line, run the following command with the annotation type defined as: "1" for SNPs, "2 for ClinVar, "3" for Conserved Domains, "4" for Functional Sites, "5" for 3D Domains, "6" for Interactions, "7" for Disulfide Bonds, and "8" for Cross-Linkages. 
+    In the command line, run the following command with the annotation type defined as: "1" for SNPs, "2 for ClinVar, "3" for Conserved Domains, "4" for Functional Sites, "5" for 3D Domains, "6" for Interactions, "7" for Disulfide Bonds, "8" for Cross-Linkages, and "9" for Post-Translational Modification (PTM). 
 
         node annotation.js Q08426 1
 

@@ -6,7 +6,7 @@
 
 "I see in 3D" (iCn3D) Structure Viewer is not only a web-based 3D viewer, but also a structure analysis tool interactively or in the batch mode using NodeJS scripts based on the npm package icn3d. iCn3D synchronizes the display of 3D structure, 2D interaction, and 1D sequences and annotations. Users' custom display can be saved in a short URL or a PNG image. <b>The complete package of iCn3D</b> including Three.js and jQuery is in the directory "dist" after you get the source code with the "Code" button. 
 * <b>View a 3D structure in iCn3D</b>: 
-    Open the link https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html, input a PDB ID, and click "Load". You can also click "File" menu to "Open File" or input other IDs.
+    Open the link https://structure.ncbi.nlm.nih.gov/icn3d, input a PDB ID, and click "Load". You can also click "File" menu to "Open File" or input other IDs.
 
     As mentioned in the menu "Help > Transformation Hints", you can use Left mouse button for rotation, Middle mouse wheel for zooming, and Right mouse button for translation. 
 
@@ -25,7 +25,7 @@
     Each operation has a corresponding command as listed at https://www.ncbi.nlm.nih.gov/Structure/icn3d/icn3d.html#commands. These commands will show up in the command/log window right beneath the 3D display. To view all previous commands, you can click "Share Link" in "File" menu. Both the original URL and the short URL can be used to display your custom view.
 
 * <b>Save your work</b>: 
-    You can save "iCn3D PNG Image" in the menu "File > Save Files". Both the PNG file and an HTML file are saved. Click the HTML file to see the PNG image, which is linked to the custom display via a shorten URL. The downloaded "iCn3D PNG Image" itself can also be used as an input in the menu "File > Open File" to reproduce the custom display. You can combine these HTML files to generate your own galleries.
+    You can save "iCn3D PNG Image" in the menu "File > Save File". Both the PNG file and an HTML file are saved. Click the HTML file to see the PNG image, which is linked to the custom display via a shorten URL. The downloaded "iCn3D PNG Image" itself can also be used as an input in the menu "File > Open File" to reproduce the custom display. You can combine these HTML files to generate your own galleries.
     
     You can also save "Share Link" in "File" menu to share with your colleagues. These URLs are lifelong. You can click "Replay Each Step > On" in "File" menu to learn how a [custom display](https://structure.ncbi.nlm.nih.gov/icn3d/share.html?u7gp4xS9rn4hahcLA) was generated.
     
@@ -41,7 +41,7 @@
     For any custom structures such as AlphaFold structures, you can show [conserved domain and 3D domain annotations](https://structure.ncbi.nlm.nih.gov/icn3d/share.html?bPSkpeshtiH1TxbP8). For AlphaFold structures, you can also show [SNP and ClinVar annotations](https://structure.ncbi.nlm.nih.gov/icn3d/share.html?XSQ5oqDCTfEQ3iAY7).
 
 * <b>Align AlphaFold structures</b>: 
-    You can align [AlphaFold structures or PDB structures](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?chainalign=P69905_A,P01942_A,1HHO_A&showalignseq=1&bu=0) with the menu "File > Align > Multiple Chains" or "File > Align > Structure to Structure > Two AlphaFold Structures". You can also load any structures as usual, then load your custom PDB file with the menu "File > Open File > PDB File (appendable)", then relaign these structures with the meu "File > Realign Selection > by Structure Alignment".
+    You can align [AlphaFold structures or PDB structures](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?chainalign=P69905_A,P01942_A,1HHO_A&showalignseq=1&bu=0) with the menu "File > Align > Multiple Chains" or "File > Align > Protein Complexes > Two AlphaFold Structures". You can also load any structures as usual, then load your custom PDB file with the menu "File > Open File > PDB File (appendable)", then relaign these structures with the meu "File > Realign Selection > by Structure Alignment".
 
 * <b>Alternate SNPs in 3D</b>: 
     You can [alternate in 3D wild type and mutant of SNPs](https://structure.ncbi.nlm.nih.gov/icn3d/share.html?fNpzDuUE287SBFtz8) by clicking the menu "Analysis > Sequences & Annotations", the tab "Details", the checkbox "SNP", and mouseover on SNPs.
@@ -75,11 +75,11 @@ Users can choose to show the most recent version of iCn3D, or a locked version o
 
 iCn3D accepts the following IDs:
 
+* <b>mmdbafid</b>: A list of PDB or AlphaFold UniProt IDs for realignment, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmdbafid=1HHO,4N7N,P69905,P01942](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmdbafid=1HHO,4N7N,P69905,P01942). You can then input multiple PDB files with the menu "File > Open File > PDB Files (appendable)". Next you can click the menu "File > Realign Selection > by Structure Alignment" to realign all loaded structures.
 * <b>mmdbid</b>: NCBI MMDB ID, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmdbid=1tup&showanno=1&show2d=1&showsets=1](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmdbid=1tup&showanno=1&show2d=1&showsets=1)
 * <b>mmtfid</b>: MMTF ID, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmtfid=1tup&show2d=1&showsets=1](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmtfid=1tup&showanno=1&showsets=1)
 * <b>pdbid</b>: PDB ID, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?pdbid=1tup&showanno=1&showsets=1](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?pdbid=1tup&showanno=1&showsets=1)
 * <b>afid</b>: AlphaFold UniProt ID, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?afid=A0A061AD48&showanno=1&showsets=1](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?afid=A0A061AD48&showanno=1&showsets=1)
-* <b>mmdbafid</b>: A list of PDB or AlphaFold UniProt IDs for realignment, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmdbafid=1HHO,4N7N,P69905,P01942](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmdbafid=1HHO,4N7N,P69905,P01942). You can then input multiple PDB files with the menu "File > Open File > PDB Files (appendable)". Next you can click the menu "File > Realign Selection > by Structure Alignment" to realign all loaded structures.
 * <b>opmid</b>: Orientations of Proteins in Membranes(OPM) PDB ID, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?opmid=6jxr&show2d=1&showsets=1](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?opmid=6jxr&showanno=1&showsets=1)
 * <b>mmcifid</b>: mmCIF ID, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmcifid=1tup&show2d=1&showsets=1](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?mmcifid=1tup&showanno=1&showsets=1)
 * <b>gi</b>: NCBI protein gi number, [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?gi=1310960&show2d=1&showsets=1](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?gi=1310960&show2d=1&showsets=1)
@@ -90,17 +90,21 @@ iCn3D accepts the following IDs:
 
 iCn3D also accepts the following file types: PDB, mmCIF, Mol2, SDF, XYZ, and iCn3D PNG. The files can be passed through a url, e.g., [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?type=pdb&url=https://files.rcsb.org/view/1gpk.pdb](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?type=pdb&url=https://files.rcsb.org/view/1gpk.pdb), [https://www.ncbi.nlm.nih.gov/Structure/icn3d2/?type=mmcif&url=https://files.rcsb.org/view/1GPK.cif](https://www.ncbi.nlm.nih.gov/Structure/icn3d2/?type=mmcif&url=https://files.rcsb.org/view/1GPK.cif), or [https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?type=icn3dpng&url=https://www.ncbi.nlm.nih.gov/Structure/icn3d/pdb/3GVU.png](https://www.ncbi.nlm.nih.gov/Structure/icn3d/full.html?type=icn3dpng&url=https://www.ncbi.nlm.nih.gov/Structure/icn3d/pdb/3GVU.png). See the [help page](https://www.ncbi.nlm.nih.gov/Structure/icn3d/docs/icn3d_help.html) or the [Doc page](https://www.ncbi.nlm.nih.gov/Structure/icn3d/icn3d.html) for more details.
 
-## Third-party libraries used
+## Third-party libraries used in Frontend
 
 * **[jQuery and jQuery UI](https://jquery.com/)**: used as a general tool to write Javascript code. Some jQuery UI features are used.
 * **[Three.js](http://threejs.org/)**: used to set up the 3D view.
-* **[D3.js](https://d3js.org/)**: used to draw force-directed graph.
+* **[Force-Directed Graph](https://gist.github.com/pkerpedjiev/f2e6ebb2532dae603de13f0606563f5b)**: "2D Graph (Force-Directed)" in the menu "Analysis > H-Bonds & Interactions" is based on Force-Directed Graph.
+
+## Third-party libraries used in Backend
+
 * **[DelPhi](http://honig.c2b2.columbia.edu/delphi)**: used to calculate electrostatic potential dynamically and is <b>licensed</b> from Columbia University.
 * **[DelPhiPKa](http://compbio.clemson.edu/pka_webserver)**: used to add hydrogens and partial charges to proteins and nucleotides.
 * **[Open Babel](http://openbabel.org/wiki/Main_Page)**: used to add hydrogens to ligands.
 * **[Antechamber](http://ambermd.org/antechamber/ac.html)**: used to add partial charges to ligands.
 * **[SymD](https://symd.nci.nih.gov/)**: used to calculate symmetry dynamically.
 * **[scap/Jackal](http://honig.c2b2.columbia.edu/scap)**: used to predict side chain conformation dynamically.
+* **[TM-align](https://zhanggroup.org/TM-align/)**: used to align two chains of 3D structures.
 
 ## Tools based on
 
@@ -109,9 +113,10 @@ iCn3D also accepts the following file types: PDB, mmCIF, Mol2, SDF, XYZ, and iCn
 * **[3Dmol](https://3dmol.csb.pitt.edu/)**: The surface generation and labeling are based on 3Dmol.
 * **[NGL Viewer](https://github.com/arose/ngl)**: The Imposter shaders are based on NGL Viewer.
 * **[LiteMol](https://github.com/dsehnal/LiteMol)**: The parser of EM density data from PDBe is based on LiteMol.
-* **[Orientations of Proteins in Membranes (OPM)](https://opm.phar.umich.edu/)**: The membrane data of transmembrane proteins are from OPM.
-* **[Force-Directed Graph](https://gist.github.com/pkerpedjiev/f2e6ebb2532dae603de13f0606563f5b)**: "2D Graph (Force-Directed)" in the menu "Analysis > H-Bonds & Interactions" is based on Force-Directed Graph.
 * **[py3Dmol](https://pypi.org/project/py3Dmol/)**: The Jupyter Notebook widget "icn3dpy" is based on py3Dmol.
+* **[Orientations of Proteins in Membranes (OPM)](https://opm.phar.umich.edu/)**: The membrane data of transmembrane proteins are from OPM.
+* **[Membranome](https://membranome.org)**: For AlphaFold Structures, the membrane data of single-spanning transmembrane proteins are from Membranome.
+* **[Post-Translational Modification (PTM)](https://www.ebi.ac.uk/proteins/api/doc/#/features)**: The PTM data are from UniProt.
 
 ## Building
 

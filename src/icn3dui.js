@@ -93,6 +93,7 @@ import {SetOption} from './icn3d/display/setOption.js';
     // classes from icn3dui
 import {AnnoCddSite} from './icn3d/annotations/annoCddSite.js';
 import {AnnoContact} from './icn3d/annotations/annoContact.js';
+import {AnnoPTM} from './icn3d/annotations/annoPTM.js';
 import {AnnoCrossLink} from './icn3d/annotations/annoCrossLink.js';
 import {AnnoDomain} from './icn3d/annotations/annoDomain.js';
 import {AnnoSnpClinVar} from './icn3d/annotations/annoSnpClinVar.js';
@@ -133,6 +134,7 @@ import {ParserUtils} from './icn3d/parsers/parserUtils.js';
 import {LoadAtomData} from './icn3d/parsers/loadAtomData.js';
 import {SetSeqAlign} from './icn3d/parsers/setSeqAlign.js';
 import {LoadPDB} from './icn3d/parsers/loadPDB.js';
+import {Vastplus} from './icn3d/parsers/vastplus.js';
 
 import {ApplyCommand} from './icn3d/selection/applyCommand.js';
 import {DefinedSets} from './icn3d/selection/definedSets.js';
@@ -144,6 +146,7 @@ import {FirstAtomObj} from './icn3d/selection/firstAtomObj.js';
 
 import {Delphi} from './icn3d/analysis/delphi.js';
 import {Dssp} from './icn3d/analysis/dssp.js';
+import {Refnum} from './icn3d/analysis/refnum.js';
 import {Scap} from './icn3d/analysis/scap.js';
 import {Symd} from './icn3d/analysis/symd.js';
 import {AlignSW} from './icn3d/analysis/alignSW.js';
@@ -175,7 +178,7 @@ class iCn3DUI {
     //even when multiple iCn3D viewers are shown together.
     this.pre = this.cfg.divid + "_";
 
-    this.REVISION = '3.13.2';
+    this.REVISION = '3.17.0';
 
     // In nodejs, iCn3D defines "window = {navigator: {}}"
     this.bNode = (Object.keys(window).length < 2) ? true : false;
@@ -187,7 +190,7 @@ class iCn3DUI {
     if(this.cfg.showmenu === undefined) this.cfg.showmenu = true;
     if(this.cfg.showtitle === undefined) this.cfg.showtitle = true;
     if(this.cfg.showcommand === undefined) this.cfg.showcommand = true;
-    if(this.cfg.simplemenu === undefined) this.cfg.simplemenu = false;
+    //if(this.cfg.simplemenu === undefined) this.cfg.simplemenu = false;
     if(this.cfg.mobilemenu === undefined) this.cfg.mobilemenu = false;
     if(this.cfg.closepopup === undefined) this.cfg.closepopup = false;
     if(this.cfg.showanno === undefined) this.cfg.showanno = false;
@@ -341,6 +344,10 @@ iCn3DUI.prototype.show3DStructure = function(pdbStr) { let me = this;
     ic.molTitle = '';
     ic.loadCmd;
 
+    // set menus
+    me.htmlCls.clickMenuCls.getHiddenMenusFromCache();
+    me.htmlCls.clickMenuCls.applyShownMenus();
+
     if(pdbStr) { // input pdbStr
         ic.init();
 
@@ -435,7 +442,11 @@ iCn3DUI.prototype.show3DStructure = function(pdbStr) { let me = this;
        ic.loadCmd = 'load af ' + me.cfg.afid;
        me.htmlCls.clickMenuCls.setLogCmd(ic.loadCmd, true);
        let bAf = true;
-       ic.pdbParserCls.downloadPdb(me.cfg.afid, bAf);
+
+       //ic.pdbParserCls.downloadPdb(me.cfg.afid, bAf);
+       $.when(ic.pdbParserCls.downloadPdb(me.cfg.afid, bAf)).then(function() {
+        ic.loadScriptCls.loadScript(me.cfg.command, undefined, true);
+       });
     }
     else if(me.cfg.opmid !== undefined) {
        ic.inputid = me.cfg.opmid;
@@ -537,6 +548,7 @@ iCn3DUI.prototype.show3DStructure = function(pdbStr) { let me = this;
     }
     else if(me.cfg.cid !== undefined) {
        ic.inputid = me.cfg.cid;
+
        let url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/" + ic.inputid + "/description/jsonp";
        $.ajax({
           url: url,
@@ -576,9 +588,16 @@ iCn3DUI.prototype.show3DStructure = function(pdbStr) { let me = this;
         else if(alignArray.length === 2) {
             ic.inputid = alignArray[0] + "_" + alignArray[1];
         }
+
         ic.loadCmd = 'load alignment ' + me.cfg.align + ' | parameters ' + me.cfg.inpara;
         me.htmlCls.clickMenuCls.setLogCmd(ic.loadCmd, true);
-        ic.alignParserCls.downloadAlignment(me.cfg.align);
+        if(me.cfg.inpara.indexOf('atype=2') == -1) {
+            ic.alignParserCls.downloadAlignment(me.cfg.align);
+        }
+        else {
+            let vastplusAtype = 2; // Tm-align
+            ic.chainalignParserCls.downloadMmdbAf(me.cfg.align, undefined, vastplusAtype);
+        }
     }
     else if(me.cfg.chainalign !== undefined) {
         ic.bNCBI = true;
@@ -592,6 +611,9 @@ iCn3DUI.prototype.show3DStructure = function(pdbStr) { let me = this;
     else if(me.cfg.mmdbafid !== undefined) {
         ic.bNCBI = true;
 
+        // remove space
+        me.cfg.mmdbafid = me.cfg.mmdbafid.replace(/\s+/g, '');
+
         ic.bMmdbafid = true;
         ic.inputid = me.cfg.mmdbafid;
         if(me.cfg.bu == 1) {
@@ -602,17 +624,19 @@ iCn3DUI.prototype.show3DStructure = function(pdbStr) { let me = this;
         }
         me.htmlCls.clickMenuCls.setLogCmd(ic.loadCmd, true);
 
-        $.when(ic.chainalignParserCls.downloadMmdbAf(me.cfg.mmdbafid)).then(function() {
-            ic.loadScriptCls.loadScript(me.cfg.command);
+        //ic.chainalignParserCls.downloadMmdbAf(me.cfg.mmdbafid);
+        $.when(ic.chainalignParserCls.downloadMmdbAf(me.cfg.mmdbafid)).then(function() {          
+            ic.loadScriptCls.loadScript(me.cfg.command, undefined, true);
         });
     }
     else if(me.cfg.command !== undefined && me.cfg.command !== '') {
         if(me.cfg.command.indexOf('url=') !== -1) ic.bInputUrlfile = true;
-        ic.loadScriptCls.loadScript(me.cfg.command);
+        ic.loadScriptCls.loadScript(me.cfg.command, undefined, true);
     }
     else {
         //alert("Please use the \"File\" menu to retrieve a structure of interest or to display a local file.");
-        me.htmlCls.dialogCls.openDlg('dl_mmdbid', 'Please input MMDB or PDB ID');
+        //me.htmlCls.dialogCls.openDlg('dl_mmdbid', 'Please input MMDB or PDB ID');
+        me.htmlCls.dialogCls.openDlg('dl_mmdbafid', 'Please input PDB/MMDB/AlphaFold UniProt IDs');
     }
   });
   return me.deferred.promise();
@@ -733,4 +757,4 @@ class printMsg {
 
 //export {iCn3DUI, printMsg}
 
-export {iCn3DUI, printMsg, HashUtilsCls, UtilsCls, ParasCls, MyEventCls, RmsdSuprCls, SubdivideCls, ConvertTypeCls, Html, iCn3D, ClickMenu, SetMenu, Dialog, SetDialog, Events, AlignSeq, SetHtml, Scene, Camera, Fog, Box, Brick, CurveStripArrow, Curve, Cylinder, Line, ReprSub, Sphere, Stick, Strand, Strip, Tube, CartoonNucl, Label, Axes, Glycan, Surface, ElectronMap, MarchingCube, ProteinSurface, ApplyCenter, ApplyClbonds, ApplyDisplay, ApplyOther, ApplySsbonds, ApplySymd, ApplyMap, ResidueLabels, Impostor, Instancing, Alternate, Draw, Contact, HBond, PiHalogen, Saltbridge, SetStyle, SetColor, SetOption, AnnoCddSite, AnnoContact, AnnoCrossLink, AnnoDomain, AnnoSnpClinVar, AnnoSsbond, AnnoTransMem, Domain3d, AddTrack, Annotation, ShowAnno, ShowSeq, HlSeq, HlUpdate, HlObjects, LineGraph, GetGraph, ShowInter, ViewInterPairs, DrawGraph, AlignParser, ChainalignParser, Dsn6Parser, MmcifParser, MmdbParser, MmtfParser, Mol2Parser, OpmParser, PdbParser, SdfParser, XyzParser, RealignParser, DensityCifParser, ParserUtils, LoadAtomData, SetSeqAlign, LoadPDB, ApplyCommand, DefinedSets, LoadScript, SelectByCommand, Selection, Resid2spec, FirstAtomObj, Delphi, Dssp, Scap, Symd, AlignSW, Analysis, Diagram2d, ResizeCanvas, Transform, SaveFile, ShareLink, ThreeDPrint, Export3D, Ray, Control, Picking, VRButton, ARButton}
+export {iCn3DUI, printMsg, HashUtilsCls, UtilsCls, ParasCls, MyEventCls, RmsdSuprCls, SubdivideCls, ConvertTypeCls, Html, iCn3D, ClickMenu, SetMenu, Dialog, SetDialog, Events, AlignSeq, SetHtml, Scene, Camera, Fog, Box, Brick, CurveStripArrow, Curve, Cylinder, Line, ReprSub, Sphere, Stick, Strand, Strip, Tube, CartoonNucl, Label, Axes, Glycan, Surface, ElectronMap, MarchingCube, ProteinSurface, ApplyCenter, ApplyClbonds, ApplyDisplay, ApplyOther, ApplySsbonds, ApplySymd, ApplyMap, ResidueLabels, Impostor, Instancing, Alternate, Draw, Contact, HBond, PiHalogen, Saltbridge, SetStyle, SetColor, SetOption, AnnoCddSite, AnnoContact, AnnoCrossLink, AnnoDomain, AnnoSnpClinVar, AnnoSsbond, AnnoTransMem, Domain3d, AddTrack, Annotation, ShowAnno, ShowSeq, HlSeq, HlUpdate, HlObjects, LineGraph, GetGraph, ShowInter, ViewInterPairs, DrawGraph, AlignParser, ChainalignParser, Dsn6Parser, MmcifParser, MmdbParser, MmtfParser, Mol2Parser, OpmParser, PdbParser, SdfParser, XyzParser, RealignParser, DensityCifParser, ParserUtils, LoadAtomData, Vastplus, SetSeqAlign, LoadPDB, ApplyCommand, DefinedSets, LoadScript, SelectByCommand, Selection, Resid2spec, FirstAtomObj, Delphi, Dssp, Refnum, Scap, Symd, AlignSW, Analysis, Diagram2d, ResizeCanvas, Transform, SaveFile, ShareLink, ThreeDPrint, Export3D, Ray, Control, Picking, VRButton, ARButton}

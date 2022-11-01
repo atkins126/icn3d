@@ -66,6 +66,17 @@ class Events {
         }
     }
 
+    convertUniProtInChains(alignment) { let me = this.icn3dui, ic = me.icn3d;
+        let idArray = alignment.split(',');
+        let alignment_final = '';
+        for(let i = 0, il = idArray.length; i < il; ++i) {
+            alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
+            if(i < il - 1) alignment_final += ',';
+        }
+
+        return alignment_final;
+    }
+
     searchSeq() { let me = this.icn3dui, ic = me.icn3d;
        let select = $("#" + me.pre + "search_seq").val();
        if(isNaN(select) && select.indexOf('$') == -1 && select.indexOf('.') == -1 && select.indexOf(':') == -1 && select.indexOf('@') == -1) {
@@ -170,6 +181,25 @@ class Events {
         let structureStr = Object.keys(ic.structures)[0];
         if(Object.keys(ic.structures).length > 1) structureStr += '-' + Object.keys(ic.structures)[1];
         ic.saveFileCls.saveFile(structureStr + '-' + idStr + '.html', 'html', encodeURIComponent(html));
+    }
+
+    setPredefinedMenu(id) { let me = this.icn3dui, ic = me.icn3d;
+        if(Object.keys(ic.structures).length < 2) {
+            alert("At least two structures are required for alignment...");
+            return;
+        }
+        if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
+            let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
+            ic.definedSetsCls.setPredefinedInMenu();
+            ic.bSetChainsAdvancedMenu = true;
+            ic.hAtoms = me.hashUtilsCls.cloneHash(prevHAtoms);
+        }
+        let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
+        if($("#" + me.pre + id).length) {
+            $("#" + me.pre + id).html(definedAtomsHtml);
+        }
+        
+        $("#" + me.pre + id).resizable();
     }
 
     //Hold all functions related to click events.
@@ -317,8 +347,12 @@ class Events {
     //    },
     //    clickRealign: function() {
         me.myEventCls.onIds("#" + me.pre + "mn2_realignresbyres", "click", function(e) { let ic = me.icn3d;
+            me.htmlCls.dialogCls.openDlg('dl_realignresbyres', 'Align multiple chains residue by residue');
+        });
+
+        me.myEventCls.onIds("#" + me.pre + "realignSelection", "click", function(e) { let ic = me.icn3d;
             if(Object.keys(ic.structures).length < 2) {
-                alert("At least two structuresare required for alignment...");
+                alert("At least two structures are required for alignment...");
                 return;
             }
             
@@ -328,49 +362,23 @@ class Events {
     //    },
     //    clickRealignonseqalign: function() {
         me.myEventCls.onIds("#" + me.pre + "mn2_realignonseqalign", "click", function(e) { let ic = me.icn3d;
-            if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realign', 'Please select two sets to realign');
+            if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realign', 'Please select two sets in two chains to realign');
 
-            if(Object.keys(ic.structures).length < 2) {
-                alert("At least two structuresare required for alignment...");
-                return;
-            }
-
-            if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
-               let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
-               ic.definedSetsCls.setPredefinedInMenu();
-               ic.bSetChainsAdvancedMenu = true;
-               ic.hAtoms = me.hashUtilsCls.cloneHash(prevHAtoms);
-            }
-            let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
-            if($("#" + me.pre + "atomsCustomRealign").length) {
-                $("#" + me.pre + "atomsCustomRealign").html(definedAtomsHtml);
-            }
-            
-            $("#" + me.pre + "atomsCustomRealign").resizable();
-            //$("#" + me.pre + "atomsCustomRealign2").resizable();
+            thisClass.setPredefinedMenu('atomsCustomRealign');
         });
 
         me.myEventCls.onIds("#" + me.pre + "mn2_realignonstruct", "click", function(e) { let ic = me.icn3d;
-            if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realignbystruct', 'Please select two sets to realign');
+            if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realignbystruct', 'Please select two sets in two chains to realign');
 
-            if(Object.keys(ic.structures).length < 2) {
-                alert("At least two structuresare required for alignment...");
-                return;
-            }
-            if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
-               let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
-               ic.definedSetsCls.setPredefinedInMenu();
-               ic.bSetChainsAdvancedMenu = true;
-               ic.hAtoms = me.hashUtilsCls.cloneHash(prevHAtoms);
-            }
-            let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
-            if($("#" + me.pre + "atomsCustomRealignByStruct").length) {
-                $("#" + me.pre + "atomsCustomRealignByStruct").html(definedAtomsHtml);
-            }
-            
-            $("#" + me.pre + "atomsCustomRealignByStruct").resizable();
-            //$("#" + me.pre + "atomsCustomRealign2").resizable();
+            thisClass.setPredefinedMenu('atomsCustomRealignByStruct');
         });
+
+        me.myEventCls.onIds("#" + me.pre + "mn2_realigntwostru", "click", function(e) { let ic = me.icn3d;
+            if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realigntwostru', 'Please select two sets in two structures to realign');
+
+            thisClass.setPredefinedMenu('atomsCustomRealignByStruct2');
+        });
+
     //    },
     //    clickApplyRealign: function() {
         me.myEventCls.onIds("#" + me.pre + "applyRealign", "click", function(e) { let ic = me.icn3d;
@@ -404,10 +412,7 @@ class Events {
                 ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
             }
  
-            // save the current selection
-            //ic.selectionCls.saveSelectionPrep();
-            //let name = 'realignSetsByStruct';
-            //ic.selectionCls.saveSelection(name, name);
+            me.cfg.aligntool = 'vast';
  
             ic.realignParserCls.realignOnStructAlign();
             if(nameArray.length > 0) {
@@ -434,6 +439,26 @@ class Events {
             }
             else {
                 me.htmlCls.clickMenuCls.setLogCmd("realign on tmalign", true);
+            }
+         });
+
+         me.myEventCls.onIds("#" + me.pre + "applyRealignByStruct_vastplus", "click", function(e) { let ic = me.icn3d;
+            e.preventDefault();
+            if(!me.cfg.notebook) dialog.dialog( "close" );
+            let nameArray = $("#" + me.pre + "atomsCustomRealignByStruct2").val();
+            if(nameArray.length > 0) {
+                ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
+            }
+
+            //me.cfg.aligntool = 'tmalign';
+
+            ic.vastplusCls.realignOnVastplus();
+
+            if(nameArray.length > 0) {
+                me.htmlCls.clickMenuCls.setLogCmd("realign on vastplus | " + nameArray, true);
+            }
+            else {
+                me.htmlCls.clickMenuCls.setLogCmd("realign on vastplus", true);
             }
          });
     //    },
@@ -539,8 +564,16 @@ class Events {
         me.myEventCls.onIds("#" + me.pre + "reload_foldseek", "click", function(e) { let ic = me.icn3d;
             e.preventDefault();
             if(!me.cfg.notebook) dialog.dialog( "close" );
-            me.htmlCls.clickMenuCls.setLogCmd("load chainalignment " + $("#" + me.pre + "foldseekchainids").val(), true);
-            window.open(hostUrl + '?chainalign=' + $("#" + me.pre + "foldseekchainids").val(), '_self');
+
+            // me.htmlCls.clickMenuCls.setLogCmd("load chainalignment " + $("#" + me.pre + "foldseekchainids").val(), true);
+            // window.open(hostUrl + '?chainalign=' + $("#" + me.pre + "foldseekchainids").val(), '_self');
+
+
+            let alignment = $("#" + me.pre + "foldseekchainids").val();
+            let alignment_final = thisClass.convertUniProtInChains(alignment);
+
+            me.htmlCls.clickMenuCls.setLogCmd("load chainalignment " + alignment_final, true);
+            window.open(hostUrl + '?chainalign=' + alignment_final + '&aligntool=tmalign&showalignseq=1&bu=0', '_self');
          });
 
         me.myEventCls.onIds("#" + me.pre + "reload_mmtf", "click", function(e) { let ic = me.icn3d;
@@ -659,6 +692,14 @@ class Events {
             window.open(hostUrl + '?align=' + alignment + '&showalignseq=1&atype=0&bu=1', '_blank');
          });
 
+        me.myEventCls.onIds("#" + me.pre + "reload_align_tmalign", "click", function(e) { let ic = me.icn3d;
+            e.preventDefault();
+            if(!me.cfg.notebook) dialog.dialog( "close" );
+            let alignment = $("#" + me.pre + "alignid1").val() + "," + $("#" + me.pre + "alignid2").val();
+            me.htmlCls.clickMenuCls.setLogCmd("load alignment " + alignment + ' | parameters &atype=2&bu=1', false);
+            window.open(hostUrl + '?align=' + alignment + '&showalignseq=1&atype=2&bu=1', '_blank');
+         });
+
         me.myEventCls.onIds("#" + me.pre + "reload_alignaf", "click", function(e) { let ic = me.icn3d;
             e.preventDefault();
             if(!me.cfg.notebook) dialog.dialog( "close" );
@@ -682,15 +723,10 @@ class Events {
            if(!me.cfg.notebook) dialog.dialog( "close" );
 
            let alignment = $("#" + me.pre + "chainalignids").val();
-           let idArray = alignment.split(',');
-           let alignment_final = '';
-           for(let i = 0, il = idArray.length; i < il; ++i) {
-               alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-               if(i < il - 1) alignment_final += ',';
-           }
+           let alignment_final = thisClass.convertUniProtInChains(alignment);
            let resalign = $("#" + me.pre + "resalignids").val();
-           let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, '; ');
-           if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split('; ').length) {
+           let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, ': ');
+           if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split(': ').length) {
                alert("Please make sure the number of chains and the lines of predefined residues are the same...");
                return;
            }
@@ -705,12 +741,7 @@ class Events {
            if(!me.cfg.notebook) dialog.dialog( "close" );
 
            let alignment = $("#" + me.pre + "chainalignids").val();
-           let idArray = alignment.split(',');
-           let alignment_final = '';
-           for(let i = 0, il = idArray.length; i < il; ++i) {
-               alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-               if(i < il - 1) alignment_final += ',';
-           }
+           let alignment_final = thisClass.convertUniProtInChains(alignment);
 
            me.htmlCls.clickMenuCls.setLogCmd("load chains " + alignment_final + " on asymmetric unit | residues | resdef ", false);
            window.open(hostUrl + '?chainalign=' + alignment_final + '&resnum=&resdef=&showalignseq=1&bu=0', '_blank');
@@ -721,12 +752,7 @@ class Events {
             if(!me.cfg.notebook) dialog.dialog( "close" );
  
             let alignment = $("#" + me.pre + "chainalignids2").val();
-            let idArray = alignment.split(',');
-            let alignment_final = '';
-            for(let i = 0, il = idArray.length; i < il; ++i) {
-                alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                if(i < il - 1) alignment_final += ',';
-            }
+            let alignment_final = thisClass.convertUniProtInChains(alignment);
             let resalign = $("#" + me.pre + "resalignids").val();
  
             me.htmlCls.clickMenuCls.setLogCmd("load chains " + alignment_final + " on asymmetric unit | residues " + resalign + " | resdef ", false);
@@ -738,15 +764,10 @@ class Events {
             if(!me.cfg.notebook) dialog.dialog( "close" );
  
             let alignment = $("#" + me.pre + "chainalignids3").val();
-            let idArray = alignment.split(',');
-            let alignment_final = '';
-            for(let i = 0, il = idArray.length; i < il; ++i) {
-                alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                if(i < il - 1) alignment_final += ',';
-            }
+            let alignment_final = thisClass.convertUniProtInChains(alignment);
 
-            let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, '; ');
-            if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split('; ').length) {
+            let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, ': ');
+            if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split(': ').length) {
                 alert("Please make sure the number of chains and the lines of predefined residues are the same...");
                 return;
             }
@@ -755,17 +776,34 @@ class Events {
             window.open(hostUrl + '?chainalign=' + alignment_final + '&resnum=&resdef=' + predefinedres + '&showalignseq=1&bu=0', '_blank');
          });
 
+         me.myEventCls.onIds("#" + me.pre + "reload_chainalign_asym4", "click", function(e) { let ic = me.icn3d;
+            e.preventDefault();
+            if(!me.cfg.notebook) dialog.dialog( "close" );
+ 
+            let alignment = $("#" + me.pre + "chainalignids4").val();
+            let alignment_final = thisClass.convertUniProtInChains(alignment);
+
+            let predefinedres = $("#" + me.pre + "predefinedres2").val().trim().replace(/\n/g, ': ');
+            if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split(': ').length) {
+                alert("Please make sure the number of chains and the lines of predefined residues are the same...");
+                return;
+            }
+
+            me.cfg.resdef = predefinedres.replace(/:/gi, ';');
+
+            let bRealign = true, bPredefined = true;
+            let chainidArray = alignment_final.split(',');
+            ic.realignParserCls.realignChainOnSeqAlign(undefined, chainidArray, bRealign, bPredefined);
+ 
+            me.htmlCls.clickMenuCls.setLogCmd("realign predefined " + alignment_final + " " + predefinedres, true);
+         });
+
         me.myEventCls.onIds("#" + me.pre + "reload_chainalign_tmalign", "click", function(e) { let ic = me.icn3d;
             e.preventDefault();
             if(!me.cfg.notebook) dialog.dialog( "close" );
 
             let alignment = $("#" + me.pre + "chainalignids").val();
-            let idArray = alignment.split(',');
-            let alignment_final = '';
-            for(let i = 0, il = idArray.length; i < il; ++i) {
-                alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                if(i < il - 1) alignment_final += ',';
-            }
+            let alignment_final = thisClass.convertUniProtInChains(alignment);
  
             me.htmlCls.clickMenuCls.setLogCmd("load chains " + alignment_final + " on asymmetric unit | residues | resdef | align tmalign", false);
             window.open(hostUrl + '?chainalign=' + alignment_final + '&aligntool=tmalign&resnum=&resdef=&showalignseq=1&bu=0', '_blank');
@@ -775,51 +813,123 @@ class Events {
            e.preventDefault();
            if(!me.cfg.notebook) dialog.dialog( "close" );
            let mutationids = $("#" + me.pre + "mutationids").val();
-           let idsource = $("#" + me.pre + "idsource").val();
-           let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));           
-           me.htmlCls.clickMenuCls.setLogCmd("3d of mutation " + mutationids, false);
-           //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap 3d ' + mutationids + '; select displayed set', '_blank');
-           window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap 3d ' + mutationids + '; select displayed set', '_blank');
+           //let idsource = $("#" + me.pre + "idsource").val();
+           let idsource, pdbsource;
+           if($("#" + me.pre + "type_mmdbid").is(":checked")) {
+                idsource = 'mmdbid';
+           }
+           else {
+                idsource = 'afid';
+           }
+           if($("#" + me.pre + "showin_currentpage").is(":checked")) {
+                pdbsource = 'currentpage';
+            }
+            else {
+                pdbsource = 'newpage';
+            }
+
+           if(pdbsource == 'currentpage') {
+                let snp = mutationids;
+
+                ic.scapCls.retrieveScap(snp);
+                me.htmlCls.clickMenuCls.setLogCmd('scap 3d ' + snp, true);
+                me.htmlCls.clickMenuCls.setLogCmd("select displayed set", true);
+           }
+           else {
+                let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));           
+                me.htmlCls.clickMenuCls.setLogCmd("3d of mutation " + mutationids, false);
+                window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap 3d ' + mutationids + '; select displayed set', '_blank');
+           }
         });
 
         me.myEventCls.onIds("#" + me.pre + "reload_mutation_pdb", "click", function(e) { let ic = me.icn3d;
            e.preventDefault();
            if(!me.cfg.notebook) dialog.dialog( "close" );
            let mutationids = $("#" + me.pre + "mutationids").val();
-           let idsource = $("#" + me.pre + "idsource").val();
-           let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
-           me.htmlCls.clickMenuCls.setLogCmd("pdb of mutation " + mutationids, false);
-           //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap pdb ' + mutationids + '; select displayed set', '_blank');
-           window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap pdb ' + mutationids + '; select displayed set', '_blank');
+           //let idsource = $("#" + me.pre + "idsource").val();
+           let idsource, pdbsource;
+           if($("#" + me.pre + "type_mmdbid").is(":checked")) {
+                idsource = 'mmdbid';
+           }
+           else {
+                idsource = 'afid';
+           }
+           if($("#" + me.pre + "showin_currentpage").is(":checked")) {
+                pdbsource = 'currentpage';
+            }
+            else {
+                pdbsource = 'newpage';
+            }
+
+           if(pdbsource == 'currentpage') {
+                let snp = mutationids;
+
+                let bPdb = true;
+                ic.scapCls.retrieveScap(snp, undefined, bPdb);
+                me.htmlCls.clickMenuCls.setLogCmd('scap pdb ' + snp, true);
+           }
+           else {
+                let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
+                me.htmlCls.clickMenuCls.setLogCmd("pdb of mutation " + mutationids, false);
+                window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap pdb ' + mutationids + '; select displayed set', '_blank');
+           }
         });
 
         me.myEventCls.onIds("#" + me.pre + "reload_mutation_inter", "click", function(e) { let ic = me.icn3d;
            e.preventDefault();
            if(!me.cfg.notebook) dialog.dialog( "close" );
            let mutationids = $("#" + me.pre + "mutationids").val();
-           let idsource = $("#" + me.pre + "idsource").val();
-
-           let mutationArray = mutationids.split(',');
-           let residArray = [];
-           for(let i = 0, il = mutationArray.length; i < il; ++i) {
-               let pos = mutationArray[i].lastIndexOf('_');
-               let resid = mutationArray[i].substr(0, pos);
-               residArray.push(resid);
+           //let idsource = $("#" + me.pre + "idsource").val();
+           let idsource, pdbsource;
+           if($("#" + me.pre + "type_mmdbid").is(":checked")) {
+                idsource = 'mmdbid';
            }
-
-           let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
-
-           // if no structures are loaded yet
-           if(!ic.structures) {
-               ic.structures = {}
-               ic.structures[mmdbid] = 1;
+           else {
+                idsource = 'afid';
            }
-           let selectSpec = ic.resid2specCls.residueids2spec(residArray);
+           if($("#" + me.pre + "showin_currentpage").is(":checked")) {
+                pdbsource = 'currentpage';
+            }
+            else {
+                pdbsource = 'newpage';
+            }
 
-           me.htmlCls.clickMenuCls.setLogCmd("interaction change of mutation " + mutationids, false);
-           //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap interaction ' + mutationids + '; select ' + selectSpec + ' | name test; line graph interaction pairs | selected non-selected | hbonds,salt bridge,interactions,halogen,pi-cation,pi-stacking | false | threshold 3.8 6 4 3.8 6 5.5; adjust dialog dl_linegraph; select displayed set', '_blank');
-           //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap interaction ' + mutationids, '_blank');
-           window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap interaction ' + mutationids, '_blank');
+           if(pdbsource == 'currentpage') {
+                let snp = mutationids;
+
+                let bInteraction = true;
+                ic.scapCls.retrieveScap(snp, bInteraction);
+                me.htmlCls.clickMenuCls.setLogCmd('scap interaction ' + snp, true);
+
+                let idArray = snp.split('_'); //stru_chain_resi_snp
+                let select = '.' + idArray[1] + ':' + idArray[2];
+                let name = 'snp_' + idArray[1] + '_' + idArray[2];
+                me.htmlCls.clickMenuCls.setLogCmd("select " + select + " | name " + name, true);
+                me.htmlCls.clickMenuCls.setLogCmd("line graph interaction pairs | selected non-selected | hbonds,salt bridge,interactions,halogen,pi-cation,pi-stacking | false | threshold 3.8 6 4 3.8 6 5.5", true);
+                me.htmlCls.clickMenuCls.setLogCmd("adjust dialog dl_linegraph", true);
+                me.htmlCls.clickMenuCls.setLogCmd("select displayed set", true);
+           }
+           else {
+                let mutationArray = mutationids.split(',');
+                let residArray = [];
+                for(let i = 0, il = mutationArray.length; i < il; ++i) {
+                    let pos = mutationArray[i].lastIndexOf('_');
+                    let resid = mutationArray[i].substr(0, pos);
+                    residArray.push(resid);
+                }
+
+                let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
+
+                // if no structures are loaded yet
+                if(!ic.structures) {
+                    ic.structures = {}
+                    ic.structures[mmdbid] = 1;
+                }
+                let selectSpec = ic.resid2specCls.residueids2spec(residArray);
+
+                me.htmlCls.clickMenuCls.setLogCmd("interaction change of mutation " + mutationids, false);
+                window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap interaction ' + mutationids, '_blank');
+           }
         });
 
     //    },
@@ -861,15 +971,23 @@ class Events {
          me.myEventCls.onIds("#" + me.pre + "reload_mmdbaf", "click", function(e) { let ic = me.icn3d;
             e.preventDefault();
             //if(!me.cfg.notebook) dialog.dialog( "close" );
-            me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf1 " + $("#" + me.pre + "mmdbafid").val(), false);
-            window.open(hostUrl + '?mmdbafid=' + $("#" + me.pre + "mmdbafid").val() + '&bu=1', '_blank');
+
+            // remove space
+            let ids = $("#" + me.pre + "mmdbafid").val().replace(/\s+/g, '');
+
+            me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf1 " + ids, false);
+            window.open(hostUrl + '?mmdbafid=' + ids + '&bu=1', '_blank');
         });
  
          me.myEventCls.onIds("#" + me.pre + "reload_mmdbaf_asym", "click", function(e) { let ic = me.icn3d;
              e.preventDefault();
              //if(!me.cfg.notebook) dialog.dialog( "close" );
-             me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf0 " + $("#" + me.pre + "mmdbafid").val(), false);
-             window.open(hostUrl + '?mmdbafid=' + $("#" + me.pre + "mmdbafid").val() + '&bu=0', '_blank');
+
+             // remove space
+             let ids = $("#" + me.pre + "mmdbafid").val().replace(/\s+/g, '');
+
+             me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf0 " + ids, false);
+             window.open(hostUrl + '?mmdbafid=' + ids + '&bu=0', '_blank');
         });
 
         me.myEventCls.onIds("#" + me.pre + "mmdbid", "keyup", function(e) { let ic = me.icn3d;
@@ -880,6 +998,15 @@ class Events {
                window.open(hostUrl + '?mmdbid=' + $("#" + me.pre + "mmdbid").val() + '&bu=0', '_blank');
               }
         });
+
+        me.myEventCls.onIds("#" + me.pre + "mmdbafid", "keyup", function(e) { let ic = me.icn3d;
+            if (e.keyCode === 13) {
+                e.preventDefault();
+                //if(!me.cfg.notebook) dialog.dialog( "close" );
+                me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf0 " + $("#" + me.pre + "mmdbafid").val(), false);
+                window.open(hostUrl + '?mmdbafid=' + $("#" + me.pre + "mmdbafid").val() + '&bu=0', '_blank');
+               }
+         });
 
     //    },
     //    clickReload_blast_rep_id: function() {
@@ -922,6 +1049,14 @@ class Events {
            //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?gi=' + $("#" + me.pre + "gi").val(), '_blank');
            window.open(hostUrl + '?gi=' + $("#" + me.pre + "gi").val(), '_blank');
         });
+
+        me.myEventCls.onIds("#" + me.pre + "reload_refseq", "click", function(e) { let ic = me.icn3d;
+            e.preventDefault();
+            if(!me.cfg.notebook) dialog.dialog( "close" );
+            me.htmlCls.clickMenuCls.setLogCmd("load refseq " + $("#" + me.pre + "refseq").val(), false);
+            //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?gi=' + $("#" + me.pre + "gi").val(), '_blank');
+            window.open(hostUrl + '?refseq=' + $("#" + me.pre + "refseq").val(), '_blank');
+         });
 
         me.myEventCls.onIds("#" + me.pre + "gi", "keyup", function(e) { let ic = me.icn3d;
            if (e.keyCode === 13) {

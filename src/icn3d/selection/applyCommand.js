@@ -304,6 +304,9 @@ class ApplyCommand {
       else if(command == 'set annotation interaction') {
           ic.annotationCls.setAnnoTabInteraction();
       }
+      else if(command == 'set annotation ptm') {
+        ic.annotationCls.setAnnoTabPTM();
+    }
       else if(command == 'set annotation cdd') {
           ic.annotationCls.setAnnoTabCdd();
       }
@@ -350,6 +353,9 @@ class ApplyCommand {
           else if(type == 'site') {
               ic.annotationCls.hideAnnoTabSite();
           }
+          else if(type == 'ptm') {
+            ic.annotationCls.hideAnnoTabPTM();
+        }
           else if(type == 'interaction') {
               ic.annotationCls.hideAnnoTabInteraction();
           }
@@ -536,6 +542,16 @@ class ApplyCommand {
       else if(command == 'realign') {
          ic.realignParserCls.realign();
       }
+      else if(command.indexOf('realign predefined ') != -1) {
+        //e.g., realign predefined 1HHO_A,4M7N_A 1,5,10-50 | 1,5,10-50: 2,6,11-51 | 1,5,10-50
+        let str = 'realign predefined ';
+        let chainids_resdef = commandOri.substr(str.length);
+        let pos = chainids_resdef.indexOf(' ');
+        let chainidArray = chainids_resdef.substr(0, pos).split(',');
+        me.cfg.resdef = chainids_resdef.substr(pos + 1).replace(/:/gi, ';'); // should be 1,5,10-50 | 1,5,10-50; 2,6,11-51 | 1,5,10-50
+
+        ic.realignParserCls.realignChainOnSeqAlign(undefined, chainidArray, true, true);
+     }
       else if(command == 'area') {
          ic.analysisCls.calculateArea();
       }
@@ -1302,7 +1318,10 @@ class ApplyCommand {
         //     $('#' + ic.pre + 'dl_selectannotations').dialog( 'close' );
         // }
       }
-      
+      else if(command.indexOf('ig refnum off') == 0) {
+        ic.refnumCls.hideIgRefNum();
+      }
+
     // special, select ==========
 
       else if(command.indexOf('select displayed set') !== -1) {
@@ -1502,7 +1521,7 @@ class ApplyCommand {
         else if(cmd.indexOf('realign on seq align') == 0) return 'File > Realign Selection > on Sequence Alignment';
         else if(cmd.indexOf('realign') == 0) return 'File > Realign Selection > Residue by Residue';
         else if(cmd.indexOf('graph interaction pairs') == 0) return hbondIntStr + ' > 2D Graph(Force-Directed)';
-        else if(cmd.indexOf('export canvas') == 0) return 'File > Save Files > iCn3D PNG Image';
+        else if(cmd.indexOf('export canvas') == 0) return 'File > Save File > iCn3D PNG Image';
         else if(cmd == 'export stl file') return printStr + 'STL';
         else if(cmd == 'export vrml file') return printStr + 'VRML(Color)';
         else if(cmd == 'export stl stabilizer file') return printStr + 'STL W/ Stabilizers';
@@ -1548,6 +1567,7 @@ class ApplyCommand {
         else if(cmd== 'set view overview') return seqAnnoStr + ': "Summary" tab';
         else if(cmd == 'set annotation custom') return seqAnnoStr + ': "Custom" checkbox';
         else if(cmd == 'set annotation interaction') return seqAnnoStr + ': "Interactions" checkbox';
+        else if(cmd == 'set annotation ptm') return seqAnnoStr + ': "PTM" checkbox';
         else if(cmd == 'set annotation cdd') return seqAnnoStr + ': "Conserved Domains" checkbox';
         else if(cmd == 'set annotation site') return seqAnnoStr + ': "Functional Sites" checkbox';
         else if(cmd == 'set annotation ssbond') return seqAnnoStr + ': "Disulfide Bonds" checkbox';

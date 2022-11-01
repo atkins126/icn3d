@@ -5077,6 +5077,10 @@ var icn3d = (function (exports) {
             return window.sessionStorage;
         }
 
+        isLocalStorageSupported() { this.icn3dui;
+          return window.localStorage;
+        }
+
         // http://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
         hexToRgb(hex, a) { this.icn3dui;
              let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -6703,7 +6707,7 @@ var icn3d = (function (exports) {
         }
 
         //Center on the selected atoms.
-        centerSelection(atoms) { let ic = this.icn3d, me = ic.icn3dui;
+        centerSelection(atoms, bNoOrientation) { let ic = this.icn3d, me = ic.icn3dui;
            //ic.transformCls.resetOrientation();
 
            ic.opts['rotationcenter'] = 'highlight center';
@@ -6712,10 +6716,12 @@ var icn3d = (function (exports) {
                atoms = me.hashUtilsCls.hash2Atoms(ic.hAtoms, ic.atoms);
            }
 
-            // reset parameters
-            ic._zoomFactor = 1.0;
-            ic.mouseChange = new THREE.Vector2(0,0);
-            ic.quaternion = new THREE.Quaternion(0,0,0,1);
+           if(!bNoOrientation) {
+                // reset parameters
+                ic._zoomFactor = 1.0;
+                ic.mouseChange = new THREE.Vector2(0,0);
+                ic.quaternion = new THREE.Quaternion(0,0,0,1);
+           }
 
            // center on the hAtoms if more than one residue is selected
            if(Object.keys(atoms).length > 1) {
@@ -7210,14 +7216,16 @@ var icn3d = (function (exports) {
                     }
 
                     //colorArray = colorArray.concat(colors[0].toArray());
-                    colorArray[offset2++] = colors[0].r;
-                    colorArray[offset2++] = colors[0].g;
-                    colorArray[offset2++] = colors[0].b;
-                    //colorArray = colorArray.concat(colors[p0.length - 1].toArray());
-                    let color = (colors[p0.length - 1]) ? colors[p0.length - 1] : (colors[p0.length - 2] ? colors[p0.length - 2] : {r:0, g:0, b:0});
-                    colorArray[offset2++] = color.r;
-                    colorArray[offset2++] = color.g;
-                    colorArray[offset2++] = color.b;
+                    if(colors[0]) {
+                        colorArray[offset2++] = colors[0].r;
+                        colorArray[offset2++] = colors[0].g;
+                        colorArray[offset2++] = colors[0].b;
+                        //colorArray = colorArray.concat(colors[p0.length - 1].toArray());
+                        let color = (colors[p0.length - 1]) ? colors[p0.length - 1] : (colors[p0.length - 2] ? colors[p0.length - 2] : {r:0, g:0, b:0});
+                        colorArray[offset2++] = color.r;
+                        colorArray[offset2++] = color.g;
+                        colorArray[offset2++] = color.b;
+                    }
                 }            vsize += 8;
                 //fs.push(new THREE.Face3(vsize, vsize + 2, vsize + 6, undefined, fs[0].color));
                 //fs.push(new THREE.Face3(vsize + 4, vsize, vsize + 6, undefined, fs[0].color));
@@ -8139,19 +8147,19 @@ var icn3d = (function (exports) {
             if(bHighlight === 2) {
               mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.5, specular: ic.frac, shininess: ic.shininess, emissive: ic.emissive, vertexColors: THREE.FaceColors, side: THREE.DoubleSide }));
 
-              ic.mdl.add(mesh);
+              if(ic.mdl) ic.mdl.add(mesh);
             }
             else if(bHighlight === 1) {
               mesh = new THREE.Mesh(geo, ic.matShader);
               mesh.renderOrder = ic.renderOrderPicking;
               //ic.mdlPicking.add(mesh);
-              ic.mdl.add(mesh);
+              if(ic.mdl) ic.mdl.add(mesh);
             }
             else {
               mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ specular: ic.frac, shininess: ic.shininess, emissive: ic.emissive, vertexColors: THREE.FaceColors, side: THREE.DoubleSide }));
               //mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ specular: ic.frac, shininess: ic.shininess, emissive: ic.emissive, color: 0xFFFFFF, side: THREE.DoubleSide }));
 
-              ic.mdl.add(mesh);
+              if(ic.mdl) ic.mdl.add(mesh);
             }
 
             if(bHighlight === 1 || bHighlight === 2) {
@@ -8390,15 +8398,16 @@ var icn3d = (function (exports) {
                     }
 
                     let maxDist = 6.0;
-                    //let bBrokenSs = (prevCoorCA && Math.abs(currentCA.x - prevCoorCA.x) > maxDist) || (prevCoorCA && Math.abs(currentCA.y - prevCoorCA.y) > maxDist) || (prevCoorCA && Math.abs(currentCA.z - prevCoorCA.z) > maxDist);
-                    let bBrokenSs = !atoms.hasOwnProperty(atom.serial) || (prevCoorCA && Math.abs(currentCA.x - prevCoorCA.x) > maxDist) || (prevCoorCA && Math.abs(currentCA.y - prevCoorCA.y) > maxDist) || (prevCoorCA && Math.abs(currentCA.z - prevCoorCA.z) > maxDist);
+                    let bBrokenSs = (prevCoorCA && Math.abs(currentCA.x - prevCoorCA.x) > maxDist) || (prevCoorCA && Math.abs(currentCA.y - prevCoorCA.y) > maxDist) || (prevCoorCA && Math.abs(currentCA.z - prevCoorCA.z) > maxDist);
+                    // The following code didn't work to select one residue
+                    // let bBrokenSs = !atoms.hasOwnProperty(atom.serial) || (prevCoorCA && Math.abs(currentCA.x - prevCoorCA.x) > maxDist) || (prevCoorCA && Math.abs(currentCA.y - prevCoorCA.y) > maxDist) || (prevCoorCA && Math.abs(currentCA.z - prevCoorCA.z) > maxDist);
 
-                    if(bBrokenSs && atom.ss === 'sheet') {
-                        bSheetSegment = true;
-                    }
-                    else if(bBrokenSs && atom.ss === 'helix') {
-                        bHelixSegment = true;
-                    }
+                    // if(bBrokenSs && atom.ss === 'sheet') {
+                    //     bSheetSegment = true;
+                    // }
+                    // else if(bBrokenSs && atom.ss === 'helix') {
+                    //     bHelixSegment = true;
+                    // }
 
                     if ((atom.ssbegin || atom.ssend || (drawnResidueCount === totalResidueCount - 1) || bBrokenSs) && pnts[0].length > 0 && bSameChain) {
                         let atomName = 'CA';
@@ -12776,7 +12785,7 @@ var icn3d = (function (exports) {
                     if(key === 'showtitle' && value === true) continue;
                     if(key === 'showcommand' && value === true) continue;
 
-                    if(key === 'simplemenu' && value === false) continue;
+                    //if(key === 'simplemenu' && value === false) continue;
                     if(key === 'mobilemenu' && value === false) continue;
                     //if(key === 'closepopup' && value === false) continue;
                     if(key === 'showanno' && value === false) continue;
@@ -12808,6 +12817,13 @@ var icn3d = (function (exports) {
                        //url += key + '=' + value + '&';
                        paraHash[key] = value;
                    }
+               }
+
+               if(ic.bAfMem) {
+                paraHash['afmem'] = 'on';
+               }
+               else {
+                paraHash['afmem'] = 'off';
                }
 
                let inparaWithoutCommand;
@@ -13021,14 +13037,14 @@ var icn3d = (function (exports) {
         removeHlObjects() { let ic = this.icn3d; ic.icn3dui;
            // remove prevous highlight
            for(let i in ic.prevHighlightObjects) {
-               ic.mdl.remove(ic.prevHighlightObjects[i]);
+               if(ic.mdl) ic.mdl.remove(ic.prevHighlightObjects[i]);
            }
 
            ic.prevHighlightObjects = [];
 
            // remove prevous highlight
            for(let i in ic.prevHighlightObjects_ghost) {
-               ic.mdl.remove(ic.prevHighlightObjects_ghost[i]);
+            if(ic.mdl) ic.mdl.remove(ic.prevHighlightObjects_ghost[i]);
            }
 
            ic.prevHighlightObjects_ghost = [];
@@ -14685,7 +14701,10 @@ var icn3d = (function (exports) {
            ic.hAtoms = {};
            this.setHAtomsFromSets(orArray, 'or');
 
-           if(Object.keys(ic.hAtoms).length == 0) ic.hAtoms = me.hashUtilsCls.cloneHash(ic.atoms);
+           if(Object.keys(ic.hAtoms).length == 0) {
+               //ic.hAtoms = me.hashUtilsCls.cloneHash(ic.atoms);
+               ic.hAtoms = me.hashUtilsCls.cloneHash(ic.dAtoms);
+           }
            this.setHAtomsFromSets(andArray, 'and');
 
            this.setHAtomsFromSets(notArray, 'not');
@@ -15146,7 +15165,11 @@ var icn3d = (function (exports) {
               let donorAngles = this.calcAngles(donorAtom, acceptorAtom);
               let idealDonorAngle = 90 * Math.PI / 180; // 90 for sp2, 60 for sp3
               for(let i = 0, il = donorAngles.length; i < il; ++i) {
-                  if(Math.abs(idealDonorAngle - donorAngles[i]) > maxHbondDonAngle) ;
+                  if(Math.abs(idealDonorAngle - donorAngles[i]) > maxHbondDonAngle) {
+    // commented out on Nov 19, 2021
+    // uncommented on Sep 8, 2022 since these conditions should be used for nucleotides
+                      return false;
+                  }
               }
 
               //if (idealGeometry[donor.index] === AtomGeometry.Trigonal){ // 120
@@ -15160,7 +15183,11 @@ var icn3d = (function (exports) {
               let acceptorAngles = this.calcAngles(acceptorAtom, donorAtom);
               let idealAcceptorAngle = 90 * Math.PI / 180;
               for(let i = 0, il = acceptorAngles.length; i < il; ++i) {
-                  if(Math.abs(idealAcceptorAngle - acceptorAngles[i]) > maxHbondAccAngle) ;
+                  if(Math.abs(idealAcceptorAngle - acceptorAngles[i]) > maxHbondAccAngle) {
+    // commented out on Nov 19, 2021, but keep it for nucleotides
+    // uncommented on Sep 8, 2022 since these conditions should be used for nucleotides
+                      return false;
+                  }
               }
 
               //if (idealGeometry[acceptor.index] === AtomGeometry.Trigonal){ // 120
@@ -17791,6 +17818,12 @@ var icn3d = (function (exports) {
              if(!ic.b2DShown) {
                  if(me.cfg.align !== undefined) {
                      let  structureArray = Object.keys(ic.structures);
+
+                     if(me.cfg.atype == 2) {
+                        let bDiagramOnly = true;
+                        ic.alignParserCls.downloadAlignment(structureArray[0] + ',' + structureArray[1], bDiagramOnly);
+                     }
+                     
                      ic.ParserUtilsCls.set2DDiagramsForAlign(structureArray[0].toUpperCase(), structureArray[1].toUpperCase());
                  }
                  else if(me.cfg.chainalign !== undefined) {
@@ -17801,6 +17834,7 @@ var icn3d = (function (exports) {
                      //else if(structureArray.length == 1) {
                      //   ic.ParserUtilsCls.set2DDiagramsForAlign(structureArray[0].toUpperCase(), structureArray[0].toUpperCase());
                      //}
+
                      ic.ParserUtilsCls.set2DDiagramsForChainalign(ic.chainidArray);
                  }
                  else {
@@ -18741,7 +18775,8 @@ var icn3d = (function (exports) {
                     break;
 
                 case 'structure':
-                    let index = -1, prevStructure = '', colorLength = me.parasCls.stdChainColors.length;
+                    let colorArray = (ic.bAfMem) ? [me.parasCls.thr(0xFF00FF), me.parasCls.thr(0x00FF00)] : me.parasCls.stdChainColors;
+                    let index = -1, prevStructure = '', colorLength = colorArray.length;
                     for (let i in atoms) {
                         let atom = ic.atoms[i];
 
@@ -18752,7 +18787,7 @@ var icn3d = (function (exports) {
                         }
 
                         if(!atom.het) {
-                            atom.color = me.parasCls.stdChainColors[index];
+                            atom.color = colorArray[index];
                             ic.atomPrevColors[i] = atom.color;
                         }
                         else {
@@ -18765,7 +18800,7 @@ var icn3d = (function (exports) {
                     break;
 
                 case 'chain':
-                    if(ic.chainsColor !== undefined && Object.keys(ic.chainsColor).length > 0) { // mmdb input
+                    if(ic.chainsColor !== undefined && Object.keys(ic.chainsColor).length > 0) { // mmdb input   
                         this.setMmdbChainColor();
                     }
                     else {
@@ -20551,11 +20586,13 @@ var icn3d = (function (exports) {
                   for(let serial in hAtom2) {
                   //for(let serial in allAtoms2) {
                       let atom = ic.atoms[serial];
+
                       if(!atom.het) {
                           // use the same color as the wild type
                           let resid = atom.structure.substr(0, atom.structure.length - 1) + '_' + atom.chain + '_' + atom.resi;
 
                           let atomWT = ic.firstAtomObjCls.getFirstAtomObj(ic.residues[resid]);
+
                           ic.atoms[serial].color = atomWT.color;
                           ic.atomPrevColors[serial] = atomWT.color;
                       }
@@ -21353,7 +21390,6 @@ var icn3d = (function (exports) {
 
                     structure = id;
 
-                    //if(id == 'stru' || bMutation || (bAppend && id.length != 4)) { // bMutation: side chain prediction
                     //if(id == 'stru' || bMutation) { // bMutation: side chain prediction
                     if(id == 'stru') {
                             structure = (moleculeNum === 1) ? id : id + moleculeNum.toString();
@@ -21363,7 +21399,7 @@ var icn3d = (function (exports) {
 
                     bHeader = true; // read the first header if there are multiple
                 } else if (record === 'TITLE ') {
-                    let  name = line.substr(10);
+                    let  name = line.substr(10).replace(/ALPHAFOLD MONOMER V2.0 PREDICTION FOR /gi, '');
                     ic.molTitle += name.trim() + " ";
 
                 } else if (record === 'HELIX ') {
@@ -21486,7 +21522,7 @@ var icn3d = (function (exports) {
                     id = 'stru';
 
                     structure = id;
-                    //if(id == 'stru' || bMutation || (bAppend && id.length != 4)) { // bMutation: side chain prediction
+                    
                     //if(id == 'stru' || bMutation) { // bMutation: side chain prediction
                     if(id == 'stru') {
                             structure = (moleculeNum === 1) ? id : id + moleculeNum.toString();
@@ -21510,7 +21546,7 @@ var icn3d = (function (exports) {
                     }
                 } else if (record === 'ATOM  ' || record === 'HETATM') {
                     structure = id;
-                    //if(id == 'stru' || bMutation || (bAppend && id.length != 4)) { // bMutation: side chain prediction
+                    
                     //if(id == 'stru' || bMutation) { // bMutation: side chain prediction
                     if(id == 'stru') {
                             structure = (moleculeNum === 1) ? id : id + moleculeNum.toString();
@@ -22171,8 +22207,17 @@ var icn3d = (function (exports) {
             if(type === 'align') {
               //serial2structure
               ic.pmid = "";
-              let  refinedStr =(me.cfg.inpara && me.cfg.inpara.indexOf('atype=1') !== -1) ? 'Invariant Core ' : '';
-              ic.molTitle = refinedStr + 'Structure Alignment of ';
+              ic.molTitle = "";
+              if(me.cfg.inpara && me.cfg.inpara.indexOf('atype=1') !== -1) {
+                ic.molTitle = 'Invariant Core Structure Alignment (VAST) of ';
+              }
+              else if(me.cfg.inpara && me.cfg.inpara.indexOf('atype=2') !== -1) {
+                ic.molTitle = 'Structure Alignment (TM-align) of ';
+              }
+              else {
+                ic.molTitle = 'Structure Alignment (VAST) of ';
+              }
+              
 
               let bTitle = false;
               for(let i = 0, il = data.alignedStructures[0].length; i < il; ++i) {
@@ -22472,8 +22517,7 @@ var icn3d = (function (exports) {
                     }
                 }
 
-                if(bProtein || bNucleotide)
-                {
+                if(bProtein || bNucleotide) {
                     if(bProtein) {
                       ic.proteins[serial] = 1;
 
@@ -22641,6 +22685,20 @@ var icn3d = (function (exports) {
             }
 
             //ic.lastTargetSerial = serial;
+
+            // remove P-P bonds in PDB 3FGU
+            for(let i in ic.chemicals) {
+                let atom = ic.atoms[i];
+                if(atom.elem == 'P' && atom.bonds.length >= 4) {
+                    // remove the bonds with another 'P'
+                    for(let j = atom.bonds.length - 1; j >= 0; --j) {
+                        let atom2 = ic.atoms[atom.bonds[j]];
+                        if(atom2.elem == 'P') {
+                            atom.bonds.splice(j, 1);
+                        }
+                    }
+                }
+            }
 
             // adjust biopolymer type
             for(let chainid in biopolymerChainsHash) {
@@ -22840,7 +22898,7 @@ var icn3d = (function (exports) {
                 hAtoms = ic.hAtoms;
             }
 
-            if(type === 'mmdbid' && (alignType === 'target' || alignType === 'query') && ic.q_rotation === undefined) {
+            if(!me.cfg.mmdbafid && type === 'mmdbid' && (alignType === 'target' || alignType === 'query') && ic.q_rotation === undefined) {
                 if(alignType === 'target' || alignType === 'query') {
                     for(let i in atoms) {
                         let  atom = atoms[i];
@@ -22890,60 +22948,85 @@ var icn3d = (function (exports) {
         downloadCid(cid) { let  ic = this.icn3d, me = ic.icn3dui;
             let  thisClass = this;
 
-            let  uri = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/" + cid + "/record/SDF/?record_type=3d&response_type=display";
-
             ic.ParserUtilsCls.setYourNote('PubChem CID ' + cid + ' in iCn3D');
 
             ic.bCid = true;
 
+            // get parent CID
+            let urlParent = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/" + ic.inputid + "/cids/JSONP?cids_type=parent";
             $.ajax({
-              url: uri,
-              dataType: 'text',
-              cache: true,
-              tryCount : 0,
-              retryLimit : 0, //1
-              beforeSend: function() {
-                  ic.ParserUtilsCls.showLoading();
-              },
-              complete: function() {
-                  //ic.ParserUtilsCls.hideLoading();
-              },
-              success: function(data) {
-                let  bResult = thisClass.loadSdfAtomData(data, cid);
+                url: urlParent,
+                dataType: 'jsonp',
+                cache: true,
+                tryCount : 0,
+                retryLimit : 0, //1
+                beforeSend: function() {
+                    ic.ParserUtilsCls.showLoading();
+                },
+                complete: function() {
+                    //ic.ParserUtilsCls.hideLoading();
+                },
+                success: function(dataParent) {
+                    let cidParent = dataParent.IdentifierList.CID[0];
 
-    //            ic.opts['pk'] = 'atom';
-    //            ic.opts['chemicals'] = 'ball and stick';
+                    let  uri = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/" + cidParent + "/record/SDF/?record_type=3d&response_type=display";
 
-                if(me.cfg.align === undefined && Object.keys(ic.structures).length == 1) {
-                    $("#" + ic.pre + "alternateWrapper").hide();
+                    $.ajax({
+                        url: uri,
+                        dataType: 'text',
+                        cache: true,
+                        tryCount : 0,
+                        retryLimit : 0, //1
+                        beforeSend: function() {
+                            ic.ParserUtilsCls.showLoading();
+                        },
+                        complete: function() {
+                            //ic.ParserUtilsCls.hideLoading();
+                        },
+                        success: function(data) {
+                            let  bResult = thisClass.loadSdfAtomData(data, cid);
+
+                //            ic.opts['pk'] = 'atom';
+                //            ic.opts['chemicals'] = 'ball and stick';
+
+                            if(me.cfg.align === undefined && Object.keys(ic.structures).length == 1) {
+                                $("#" + ic.pre + "alternateWrapper").hide();
+                            }
+
+                            if(!bResult) {
+                            alert('The SDF of CID ' + cid + ' has the wrong format...');
+                            }
+                            else {
+                            ic.setStyleCls.setAtomStyleByOptions(ic.opts);
+                            ic.setColorCls.setColorByOptions(ic.opts, ic.atoms);
+
+                            ic.ParserUtilsCls.renderStructure();
+
+                            if(me.cfg.rotate !== undefined) ic.resizeCanvasCls.rotStruc(me.cfg.rotate, true);
+
+                            //if(me.deferred !== undefined) me.deferred.resolve(); if(ic.deferred2 !== undefined) ic.deferred2.resolve();
+                            }
+                        },
+                        error : function(xhr, textStatus, errorThrown ) {
+                            this.tryCount++;
+                            if(this.tryCount <= this.retryLimit) {
+                                //try again
+                                $.ajax(this);
+                                return;
+                            }
+                            return;
+                        }
+                    })
+                    .fail(function() {
+                        alert( "This CID may not have 3D structure..." );
+                    });
+                },
+                error : function(xhr, textStatus, errorThrown ) {
+                    alert( "Can not retrieve the parant CID..." );
                 }
-
-                if(!bResult) {
-                  alert('The SDF of CID ' + cid + ' has the wrong format...');
-                }
-                else {
-                  ic.setStyleCls.setAtomStyleByOptions(ic.opts);
-                  ic.setColorCls.setColorByOptions(ic.opts, ic.atoms);
-
-                  ic.ParserUtilsCls.renderStructure();
-
-                  if(me.cfg.rotate !== undefined) ic.resizeCanvasCls.rotStruc(me.cfg.rotate, true);
-
-                  //if(me.deferred !== undefined) me.deferred.resolve(); if(ic.deferred2 !== undefined) ic.deferred2.resolve();
-                }
-              },
-              error : function(xhr, textStatus, errorThrown ) {
-                this.tryCount++;
-                if(this.tryCount <= this.retryLimit) {
-                    //try again
-                    $.ajax(this);
-                    return;
-                }
-                return;
-              }
             })
             .fail(function() {
-                alert( "This CID may not have 3D structure..." );
+                alert( "Can not retrieve the parant CID..." );
             });
         }
 
@@ -23553,13 +23636,18 @@ var icn3d = (function (exports) {
           $.when.apply(undefined, ajaxArray).then(function() {
               let dataArray =(struArray.length == 1) ? [arguments] : Array.from(arguments);
               thisClass.parseDsspData(dataArray, struArray, bAppend);
+
+              if(!ic.bCheckMemProtein) {
+                ic.ParserUtilsCls.checkMemProtein(me.cfg.afid);
+                ic.bCheckMemProtein = true;
+              }
           })
           .fail(function() {
               console.log("DSSP calculation had a problem with this structure " + struArray[0] + "...");
 
               ic.pdbParserCls.loadPdbDataRender(bAppend);
 
-              if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
+              if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
               if(ic.deferredSecondary !== undefined) ic.deferredSecondary.resolve();
           });
         }
@@ -23678,7 +23766,7 @@ var icn3d = (function (exports) {
 
             ic.pdbParserCls.loadPdbDataRender(bAppend);
 
-            if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
+            //if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
             if(ic.deferredSecondary !== undefined) ic.deferredSecondary.resolve();
         }
     }
@@ -23696,60 +23784,62 @@ var icn3d = (function (exports) {
         //it can be chained together with other deferred functions for sequential execution. A wrapper
         //was added to support both http and https.
         downloadPdb(pdbid, bAf) { let ic = this.icn3d; ic.icn3dui;
-           let  url, dataType;
+          ic.deferredOpm = $.Deferred(function() {
+            let  url, dataType;
 
-           if(bAf) {
-               url = "https://alphafold.ebi.ac.uk/files/AF-" + pdbid + "-F1-model_v2.pdb";
-               ic.ParserUtilsCls.setYourNote(pdbid.toUpperCase() + '(AlphaFold) in iCn3D');
-           }
-           else {
-               url = "https://files.rcsb.org/view/" + pdbid + ".pdb";
-               ic.ParserUtilsCls.setYourNote(pdbid.toUpperCase() + '(PDB) in iCn3D');
-           }
+            if(bAf) {
+                url = "https://alphafold.ebi.ac.uk/files/AF-" + pdbid + "-F1-model_v3.pdb";
+                ic.ParserUtilsCls.setYourNote(pdbid.toUpperCase() + '(AlphaFold) in iCn3D');
+            }
+            else {
+                url = "https://files.rcsb.org/view/" + pdbid + ".pdb";
+                ic.ParserUtilsCls.setYourNote(pdbid.toUpperCase() + '(PDB) in iCn3D');
+            }
 
-           dataType = "text";
+            dataType = "text";
 
-           ic.bCid = undefined;
+            ic.bCid = undefined;
 
-           $.ajax({
-              url: url,
-              dataType: dataType,
-              cache: true,
-              tryCount : 0,
-              retryLimit : 0, //1
-              beforeSend: function() {
-                  ic.ParserUtilsCls.showLoading();
-              },
-              complete: function() {
-                  //ic.ParserUtilsCls.hideLoading();
-              },
-              success: function(data) {
-                  //ic.pdbParserCls.loadPdbData(data, pdbid);
-                  ic.deferredOpm = $.Deferred(function() {
-                      //ic.loadPdbOpmData(data, pdbid);
-                      if(bAf) {
-                          // add UniProt ID into the header
-                          let header = 'HEADER                                                        ' + pdbid + '\n';
-                          data = header + data;
-                          ic.opmParserCls.parseAtomData(data, pdbid, undefined, 'pdb', undefined);
-                      }
-                      else {
-                          ic.opmParserCls.loadOpmData(data, pdbid, undefined, 'pdb');
-                      }
-                  });
+            $.ajax({
+                url: url,
+                dataType: dataType,
+                cache: true,
+                tryCount : 0,
+                retryLimit : 0, //1
+                beforeSend: function() {
+                    ic.ParserUtilsCls.showLoading();
+                },
+                complete: function() {
+                    //ic.ParserUtilsCls.hideLoading();
+                },
+                success: function(data) {
+                    //ic.deferredOpm = $.Deferred(function() {
+                        if(bAf) {
+                            // add UniProt ID into the header
+                            let header = 'HEADER                                                        ' + pdbid + '\n';
+                            data = header + data;          
+                            ic.opmParserCls.parseAtomData(data, pdbid, undefined, 'pdb', undefined);
+                        }
+                        else {
+                            ic.opmParserCls.loadOpmData(data, pdbid, undefined, 'pdb');
+                        }
+                    //});
 
-                  return ic.deferredOpm.promise();
-              },
-              error : function(xhr, textStatus, errorThrown ) {
-                this.tryCount++;
-                if(this.tryCount <= this.retryLimit) {
-                    //try again
-                    $.ajax(this);
+                    //return ic.deferredOpm.promise();
+                },
+                error : function(xhr, textStatus, errorThrown ) {
+                    this.tryCount++;
+                    if(this.tryCount <= this.retryLimit) {
+                        //try again
+                        $.ajax(this);
+                        return;
+                    }
                     return;
                 }
-                return;
-              }
-           });
+            });
+          });
+
+          return ic.deferredOpm.promise();
         }
 
         //Load structures from a "URL". Due to the same domain policy of Ajax call, the URL should be in the same
@@ -23791,7 +23881,15 @@ var icn3d = (function (exports) {
 
                 if(type === 'pdb') {
                     thisClass.loadPdbData(data);
-                    ic.loadScriptCls.loadScript(command);
+                    ic.loadScriptCls.loadScript(command, undefined, true);
+
+                    // rotate for links from Membranome
+                    if(me.cfg.url && me.cfg.url.indexOf('membranome') != -1) {
+                        let  axis = new THREE.Vector3(1,0,0);
+                        let  angle = -90 / 180.0 * Math.PI;
+
+                        ic.transformCls.setRotation(axis, angle);
+                    }
                 }
                 else if(type === 'mmcif') {
                     ic.mmcifParserCls.parseMmcifData(data, undefined, command);
@@ -23843,9 +23941,6 @@ var icn3d = (function (exports) {
 
               ic.asuCnt = ic.biomtMatrices.length;
             }
-            else {
-              $("#" + ic.pre + "assemblyWrapper").hide();
-            }
 
             if(ic.emd !== undefined) {
                 $("#" + ic.pre + "mapWrapper1").hide();
@@ -23875,6 +23970,9 @@ var icn3d = (function (exports) {
             }
             else {
                 this.loadPdbDataRender(bAppend);
+                ic.ParserUtilsCls.checkMemProtein(me.cfg.afid);
+
+                if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
             }
 
             return hAtoms;
@@ -23890,13 +23988,13 @@ var icn3d = (function (exports) {
         }
 
         loadPdbDataRender(bAppend) { let  ic = this.icn3d, me = ic.icn3dui;
-            ic.pmid = ic.pmid;
+            //ic.pmid = ic.pmid;
 
             if(me.cfg.align === undefined && Object.keys(ic.structures).length == 1) {
                 $("#" + ic.pre + "alternateWrapper").hide();
             }
 
-            if(me.cfg.afid) {
+            if(me.cfg.afid && !ic.bAfMem) {
                 ic.opts['color'] = 'confidence';
             }
 
@@ -24023,9 +24121,6 @@ var icn3d = (function (exports) {
                 $("#" + ic.pre + "assemblyWrapper").show();
 
                 ic.asuCnt = ic.biomtMatrices.length;
-            }
-            else {
-                $("#" + ic.pre + "assemblyWrapper").hide();
             }
 
             let  oriindex2serial = {};
@@ -24393,7 +24488,7 @@ var icn3d = (function (exports) {
         }
 
         //Load the VAST+ structure alignment for the pair of structures "align", e.g., "align" could be "1HHO,4N7N".
-        downloadAlignment(align) { let  ic = this.icn3d, me = ic.icn3dui;
+        downloadAlignment(align, bDiagramOnly) { let  ic = this.icn3d, me = ic.icn3dui;
             let  thisClass = this;
 
             ic.opts['proteins'] = 'c alpha trace';
@@ -24526,145 +24621,147 @@ var icn3d = (function (exports) {
                     ic.alignmolid2color.push(tmpHash);
                 }
 
-                //var url3 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&atomonly=1&uid=" + ic.mmdbidArray[0];
-                //var url4 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&atomonly=1&uid=" + ic.mmdbidArray[1];
-                // need the parameter moleculeInfor
-                let  url3 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&uid=" + ic.mmdbidArray[0];
-                let  url4 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&uid=" + ic.mmdbidArray[1];
+                if(!bDiagramOnly) {
+                    //var url3 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&atomonly=1&uid=" + ic.mmdbidArray[0];
+                    //var url4 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&atomonly=1&uid=" + ic.mmdbidArray[1];
+                    // need the parameter moleculeInfor
+                    let  url3 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&uid=" + ic.mmdbidArray[0];
+                    let  url4 = me.htmlCls.baseUrl + "mmdb/mmdb_strview.cgi?v=2&program=icn3d&b=1&s=1&ft=1&bu=" + me.cfg.bu + "&uid=" + ic.mmdbidArray[1];
 
-                let  d3 = $.ajax({
-                  url: url3,
-                  dataType: 'jsonp',
-                  cache: true,
-                  beforeSend: function() {
-                      ic.ParserUtilsCls.showLoading();
-                  },
-                  complete: function() {
-                      //ic.ParserUtilsCls.hideLoading();
-                  }
-                });
-                let  d4 = $.ajax({
-                  url: url4,
-                  dataType: 'jsonp',
-                  cache: true,
-                  beforeSend: function() {
-                      ic.ParserUtilsCls.showLoading();
-                  },
-                  complete: function() {
-                      //ic.ParserUtilsCls.hideLoading();
-                  }
-                });
+                    let  d3 = $.ajax({
+                    url: url3,
+                    dataType: 'jsonp',
+                    cache: true,
+                    beforeSend: function() {
+                        ic.ParserUtilsCls.showLoading();
+                    },
+                    complete: function() {
+                        //ic.ParserUtilsCls.hideLoading();
+                    }
+                    });
+                    let  d4 = $.ajax({
+                    url: url4,
+                    dataType: 'jsonp',
+                    cache: true,
+                    beforeSend: function() {
+                        ic.ParserUtilsCls.showLoading();
+                    },
+                    complete: function() {
+                        //ic.ParserUtilsCls.hideLoading();
+                    }
+                    });
 
-                $.when( d3, d4 ).then(function( v3, v4 ) {
-                    // Each argument is an array with the following structure: [ data, statusText, jqXHR ]
-                    //var data2 = v2[0];
-                    let  data2 = data;
-                    let  data3 = v3[0];
-                    let  data4 = v4[0];
+                    $.when( d3, d4 ).then(function( v3, v4 ) {
+                        // Each argument is an array with the following structure: [ data, statusText, jqXHR ]
+                        //var data2 = v2[0];
+                        let  data2 = data;
+                        let  data3 = v3[0];
+                        let  data4 = v4[0];
 
-                    if(data3.atoms !== undefined && data4.atoms !== undefined) {
-                        ic.deferredOpm = $.Deferred(function() {
-                            //ic.mmdbidArray = [];
-                            //for(let i = 0, il = data.alignedStructures[0].length; i < il; ++i) {
-                            //    ic.mmdbidArray.push(data.alignedStructures[0][i].pdbId);
-                            //}
+                        if(data3.atoms !== undefined && data4.atoms !== undefined) {
+                            ic.deferredOpm = $.Deferred(function() {
+                                //ic.mmdbidArray = [];
+                                //for(let i = 0, il = data.alignedStructures[0].length; i < il; ++i) {
+                                //    ic.mmdbidArray.push(data.alignedStructures[0][i].pdbId);
+                                //}
 
-                            ic.ParserUtilsCls.setYourNote((ic.mmdbidArray[0] + ',' + ic.mmdbidArray[1]).toUpperCase() + '(VAST+) in iCn3D');
+                                ic.ParserUtilsCls.setYourNote((ic.mmdbidArray[0] + ',' + ic.mmdbidArray[1]).toUpperCase() + '(VAST+) in iCn3D');
 
-                            // get transformation factors
-                            let  factor = 1; //10000;
-                            //var scale = data2.transform.scale / factor;
-                            let  tMaster = data2.transform.translate.master;
-                            let  tMVector = new THREE.Vector3(tMaster[0] / factor, tMaster[1] / factor, tMaster[2] / factor);
-                            let  tSlave = data2.transform.translate.slave;
-                            let  tSVector = new THREE.Vector3(tSlave[0] / factor, tSlave[1] / factor, tSlave[2] / factor);
-                            let  rotation = data2.transform.rotate;
-                            let  rMatrix = [];
-                            for(let i = 0, il = rotation.length; i < il; ++i) { // 9 elements
-                                rMatrix.push(rotation[i] / factor);
-                            }
-
-                            // get sequence
-                            ic.chainid2seq = {};
-                            for(let chain in data3.sequences) {
-                                let  chainid = ic.mmdbidArray[0] + '_' + chain;
-                                ic.chainid2seq[chainid] = data3.sequences[chain]; // ["0","D","ASP"],
-                            }
-                            for(let chain in data4.sequences) {
-                                let  chainid = ic.mmdbidArray[1] + '_' + chain;
-                                ic.chainid2seq[chainid] = data4.sequences[chain]; // ["0","D","ASP"],
-                            }
-
-                            // atoms
-                            let  atomsM = data3.atoms;
-                            let  atomsS = data4.atoms;
-
-                            // fix serialInterval
-                            let  nAtom1 = data3.atomCount;
-                            let  nAtom2 = data4.atomCount;
-
-                            for(let i = 0, il = data2.alignedStructures[0].length; i < il; ++i) {
-                              let  structure = data2.alignedStructures[0][i];
-
-                              structure.serialInterval = [];
-                              if(i == 0) {
-                                  structure.serialInterval.push(1);
-                                  structure.serialInterval.push(nAtom1);
-                              }
-                              else if(i == 1) {
-                                  structure.serialInterval.push(nAtom1 + 1);
-                                  structure.serialInterval.push(nAtom1 + nAtom2);
-                              }
-                            }
-
-                            let  allAtoms = {};
-                            for(let i in atomsM) {
-                                let  atm = atomsM[i];
-
-                                atm.coord = new THREE.Vector3(atm.coord[0], atm.coord[1], atm.coord[2]);
-                                atm.coord.add(tMVector);
-
-                                let  x = atm.coord.x * rMatrix[0] + atm.coord.y * rMatrix[1] + atm.coord.z * rMatrix[2];
-                                let  y = atm.coord.x * rMatrix[3] + atm.coord.y * rMatrix[4] + atm.coord.z * rMatrix[5];
-                                let  z = atm.coord.x * rMatrix[6] + atm.coord.y * rMatrix[7] + atm.coord.z * rMatrix[8];
-
-                                atm.coord.x = x;
-                                atm.coord.y = y;
-                                atm.coord.z = z;
-
-                                allAtoms[i] = atm;
-                            }
-
-                            for(let i in atomsS) {
-                                let  atm = atomsS[i];
-
-                                atm.coord = new THREE.Vector3(atm.coord[0], atm.coord[1], atm.coord[2]);
-                                atm.coord.add(tSVector);
-
-                                // update the bonds
-                                for(let j = 0, jl = atm.bonds.length; j < jl; ++j) {
-                                    atm.bonds[j] += nAtom1;
+                                // get transformation factors
+                                let  factor = 1; //10000;
+                                //var scale = data2.transform.scale / factor;
+                                let  tMaster = data2.transform.translate.master;
+                                let  tMVector = new THREE.Vector3(tMaster[0] / factor, tMaster[1] / factor, tMaster[2] / factor);
+                                let  tSlave = data2.transform.translate.slave;
+                                let  tSVector = new THREE.Vector3(tSlave[0] / factor, tSlave[1] / factor, tSlave[2] / factor);
+                                let  rotation = data2.transform.rotate;
+                                let  rMatrix = [];
+                                for(let i = 0, il = rotation.length; i < il; ++i) { // 9 elements
+                                    rMatrix.push(rotation[i] / factor);
                                 }
 
-                                allAtoms[(parseInt(i) + nAtom1).toString()] = atm;
-                            }
+                                // get sequence
+                                ic.chainid2seq = {};
+                                for(let chain in data3.sequences) {
+                                    let  chainid = ic.mmdbidArray[0] + '_' + chain;
+                                    ic.chainid2seq[chainid] = data3.sequences[chain]; // ["0","D","ASP"],
+                                }
+                                for(let chain in data4.sequences) {
+                                    let  chainid = ic.mmdbidArray[1] + '_' + chain;
+                                    ic.chainid2seq[chainid] = data4.sequences[chain]; // ["0","D","ASP"],
+                                }
 
-                            // combine data
-                            let  allData = {};
-                            allData.alignedStructures = data2.alignedStructures;
-                            allData.alignment = data2.alignment;
-                            allData.atoms = allAtoms;
+                                // atoms
+                                let  atomsM = data3.atoms;
+                                let  atomsS = data4.atoms;
 
-                            thisClass.loadOpmDataForAlign(allData, seqalign, ic.mmdbidArray);
-                        });
+                                // fix serialInterval
+                                let  nAtom1 = data3.atomCount;
+                                let  nAtom2 = data4.atomCount;
 
-                        return ic.deferredOpm.promise();
-                    }
-                    else {
-                        alert('invalid atoms data.');
-                        return false;
-                    }
-                });
+                                for(let i = 0, il = data2.alignedStructures[0].length; i < il; ++i) {
+                                let  structure = data2.alignedStructures[0][i];
+
+                                structure.serialInterval = [];
+                                if(i == 0) {
+                                    structure.serialInterval.push(1);
+                                    structure.serialInterval.push(nAtom1);
+                                }
+                                else if(i == 1) {
+                                    structure.serialInterval.push(nAtom1 + 1);
+                                    structure.serialInterval.push(nAtom1 + nAtom2);
+                                }
+                                }
+
+                                let  allAtoms = {};
+                                for(let i in atomsM) {
+                                    let  atm = atomsM[i];
+
+                                    atm.coord = new THREE.Vector3(atm.coord[0], atm.coord[1], atm.coord[2]);
+                                    atm.coord.add(tMVector);
+
+                                    let  x = atm.coord.x * rMatrix[0] + atm.coord.y * rMatrix[1] + atm.coord.z * rMatrix[2];
+                                    let  y = atm.coord.x * rMatrix[3] + atm.coord.y * rMatrix[4] + atm.coord.z * rMatrix[5];
+                                    let  z = atm.coord.x * rMatrix[6] + atm.coord.y * rMatrix[7] + atm.coord.z * rMatrix[8];
+
+                                    atm.coord.x = x;
+                                    atm.coord.y = y;
+                                    atm.coord.z = z;
+
+                                    allAtoms[i] = atm;
+                                }
+
+                                for(let i in atomsS) {
+                                    let  atm = atomsS[i];
+
+                                    atm.coord = new THREE.Vector3(atm.coord[0], atm.coord[1], atm.coord[2]);
+                                    atm.coord.add(tSVector);
+
+                                    // update the bonds
+                                    for(let j = 0, jl = atm.bonds.length; j < jl; ++j) {
+                                        atm.bonds[j] += nAtom1;
+                                    }
+
+                                    allAtoms[(parseInt(i) + nAtom1).toString()] = atm;
+                                }
+
+                                // combine data
+                                let  allData = {};
+                                allData.alignedStructures = data2.alignedStructures;
+                                allData.alignment = data2.alignment;
+                                allData.atoms = allAtoms;
+
+                                thisClass.loadOpmDataForAlign(allData, seqalign, ic.mmdbidArray);
+                            });
+
+                            return ic.deferredOpm.promise();
+                        }
+                        else {
+                            alert('invalid atoms data.');
+                            return false;
+                        }
+                    });
+                }
             });
         }
 
@@ -24923,8 +25020,6 @@ var icn3d = (function (exports) {
               }
               else if(type === 'pdb') {
                   ic.pdbParserCls.loadPdbData(data, pdbid);
-
-                  if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
               }
               else if(type === 'align') {
                   if(ic.bOpm) {
@@ -24990,7 +25085,7 @@ var icn3d = (function (exports) {
 
             let  molid2rescount = data.moleculeInfor;
             let  molid2color = {}, chain2molid = {}, molid2chain = {};
-            let  chainNameHash = {};
+            let  chainNameHash = {};       
             for(let i in molid2rescount) {
               if(Object.keys(molid2rescount[i]).length === 0) continue;
 
@@ -25010,7 +25105,7 @@ var icn3d = (function (exports) {
               chain2molid[chain] = i;
               molid2chain[i] = chain;
 
-              ic.chainsColor[chain] =(type !== undefined) ? me.parasCls.thr(me.htmlCls.GREY8) : me.parasCls.thr(color);
+              ic.chainsColor[chain] = (type !== undefined && !me.cfg.mmdbafid) ? me.parasCls.thr(me.htmlCls.GREY8) : me.parasCls.thr(color);
 
               let  geneId =(molid2rescount[i].geneId === undefined) ? '' : molid2rescount[i].geneId;
               let  geneSymbol =(molid2rescount[i].geneSymbol === undefined) ? '' : molid2rescount[i].geneSymbol;
@@ -25174,10 +25269,6 @@ var icn3d = (function (exports) {
             if(ic.bAssemblyUseAsu) { 
                 $("#" + ic.pre + "assemblyWrapper").show();
                 //ic.bAssembly = true;
-            }
-            else {
-                $("#" + ic.pre + "assemblyWrapper").hide();
-                //ic.bAssembly = false;
             }
 
             if(ic.emd !== undefined) {
@@ -25450,7 +25541,8 @@ var icn3d = (function (exports) {
                 chainidArray.push(struct2chain[fromStruct]);
             }
 
-                  // align seq
+            // align seq
+            //ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray, undefined, true);
             ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray);
 
             name = 'protein_aligned';
@@ -25465,7 +25557,7 @@ var icn3d = (function (exports) {
 
           let  toStruct = chainidArray[0].substr(0, chainidArray[0].indexOf('_')); //.toUpperCase();
 
-          let  hAtoms = {};
+          let  hAtoms = {}, rmsd;
 
           ic.realignResid = {};
 
@@ -25507,16 +25599,37 @@ var icn3d = (function (exports) {
               let  bChainAlign = true;
               // set ic.qt_start_end in alignCoords()
 
-              let  hAtomsTmp = ic.ParserUtilsCls.alignCoords(coord2, coord1, fromStruct, undefined, chainTo, chainFrom, index + 1, bChainAlign);
-              hAtoms = me.hashUtilsCls.unionHash(hAtoms, hAtomsTmp);
+              let  result = ic.ParserUtilsCls.alignCoords(coord2, coord1, fromStruct, undefined, chainTo, chainFrom, index + 1, bChainAlign);
+              hAtoms = me.hashUtilsCls.unionHash(hAtoms, result.hAtoms);
+              rmsd = parseFloat(result.rmsd);
           }
 
-          // align seq
-          ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray);
+          // If rmsd from vastsrv is too large, realign the chains
+          if(me.cfg.chainalign && !me.cfg.usepdbnum && me.cfg.resdef && rmsd > 5) {      
+            let nameArray = me.cfg.chainalign.split(',');
+            if(nameArray.length > 0) {
+                ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
+            }
 
-          ic.transformCls.zoominSelection();
+            me.cfg.aligntool = 'tmalign';
 
-          ic.chainalignParserCls.downloadChainalignmentPart3(undefined, chainidArray, ic.hAtoms);
+            ic.realignParserCls.realignOnStructAlign();
+            // if(nameArray.length > 0) {
+            //     me.htmlCls.clickMenuCls.setLogCmd("realign on tmalign | " + nameArray, true);
+            // }
+            // else {
+            //     me.htmlCls.clickMenuCls.setLogCmd("realign on tmalign", true);
+            // }
+          }
+          else {
+            // align seq
+            //ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray, undefined, true);
+            ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray);
+
+            ic.transformCls.zoominSelection();
+
+            ic.chainalignParserCls.downloadChainalignmentPart3(undefined, chainidArray, ic.hAtoms);
+          }
         }
 
         parseChainRealignData(dataArray, chainresiCalphaHash2, chainidArray, struct2SeqHash, struct2CoorHash, struct2resid, bRealign) { let  ic = this.icn3d, me = ic.icn3dui;
@@ -25610,8 +25723,8 @@ var icn3d = (function (exports) {
                   //let  chainFrom = chainidArray[index + 1];
 
                   let  bChainAlign = true;
-                  let  hAtomsTmp = ic.ParserUtilsCls.alignCoords(coordsFrom, coordsTo, fromStruct, undefined, chainTo, chainFrom, index + 1, bChainAlign);
-                  hAtoms = me.hashUtilsCls.unionHash(hAtoms, hAtomsTmp);
+                  let  result = ic.ParserUtilsCls.alignCoords(coordsFrom, coordsTo, fromStruct, undefined, chainTo, chainFrom, index + 1, bChainAlign);
+                  hAtoms = me.hashUtilsCls.unionHash(hAtoms, result.hAtoms);
 
         //          ic.opts['color'] = 'identity';
         //          ic.setColorCls.setColorByOptions(ic.opts, ic.hAtoms);
@@ -25639,24 +25752,38 @@ var icn3d = (function (exports) {
 
           if(bRealign) {
             // align seq
-            //ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray, bRealign);
+            //ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray, undefined, bRealign);
             ic.hAtoms = ic.chainalignParserCls.setMsa(chainidArray);
-
-            ic.transformCls.zoominSelection();
-
-
-            ic.dAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms); //hAtoms;
-            //ic.hAtoms = hAtoms;
-
-            ic.opts['color'] = 'identity';
-            //ic.setColorCls.setColorByOptions(ic.opts, ic.atoms);
-            ic.setColorCls.setColorByOptions(ic.opts, ic.hAtoms);
-            
             let name = 'protein_aligned';
             ic.selectionCls.saveSelection(name, name);
-            
+
+            if(ic.bAfMem) {
+                ic.selectionCls.selectAll_base();
+
+                ic.opts['chemicals'] = 'stick';  
+                ic.opts['color'] = 'structure';
+
+                ic.setColorCls.setColorByOptions(ic.opts, ic.atoms);
+            }
+            else {
+                ic.transformCls.zoominSelection();
+
+                ic.dAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms); //hAtoms;
+        
+                ic.opts['color'] = 'identity';
+
+                ic.setColorCls.setColorByOptions(ic.opts, ic.hAtoms);
+            }
+
             ic.drawCls.draw();
             ic.hlUpdateCls.updateHlAll();
+
+            if(ic.bAfMem) {
+                let  axis = new THREE.Vector3(1,0,0);
+                let  angle = -90 / 180.0 * Math.PI;
+
+                ic.transformCls.setRotation(axis, angle);
+            }
                    
             if(ic.deferredRealign !== undefined) ic.deferredRealign.resolve();
           }
@@ -25670,7 +25797,7 @@ var icn3d = (function (exports) {
           }
         }
 
-        realignOnSeqAlign() { let ic = this.icn3d; ic.icn3dui;
+        realignOnSeqAlign(pdbidTemplate) { let ic = this.icn3d; ic.icn3dui;
             let  chainidHash = ic.firstAtomObjCls.getChainsFromAtoms(ic.hAtoms);
 
             let  chainidArrayTmp = Object.keys(chainidHash);
@@ -25681,7 +25808,16 @@ var icn3d = (function (exports) {
                 if(chainidArrayTmp[i] != prevChainid) chainidArray.push(chainidArrayTmp[i]);
                 prevChainid = chainidArrayTmp[i];
             }
-
+            
+            // use the model from Membranome as template
+            if(ic.bAfMem && chainidArray.length == 2) {
+                if(chainidArray[1].split('_')[0] == pdbidTemplate) {
+                    let tmp = chainidArray[0];
+                    chainidArray[0] = chainidArray[1]; 
+                    chainidArray[1] = tmp;
+                }
+            }
+            
             let  bRealign = true;
             ic.qt_start_end = []; // reset the alignment
 
@@ -25743,9 +25879,12 @@ var icn3d = (function (exports) {
                                 });
                             }
                             else {
-                                let pdb_target = ic.saveFileCls.getAtomPDB(struct2domain[struct1][chainid1]);
-                                let pdb_query = ic.saveFileCls.getAtomPDB(struct2domain[struct2][chainid2]);
-                            
+                                let pdb_target = ic.saveFileCls.getAtomPDB(struct2domain[struct1][chainid1], undefined, undefined, undefined, undefined, struct1);
+                                let pdb_query = ic.saveFileCls.getAtomPDB(struct2domain[struct2][chainid2], undefined, undefined, undefined, undefined, struct2);
+      
+                                // let pdb_target = ic.saveFileCls.getAtomPDB(ic.chains[chainid1], undefined, undefined, undefined, undefined, struct1);
+                                // let pdb_query = ic.saveFileCls.getAtomPDB(ic.chains[chainid2], undefined, undefined, undefined, undefined, struct2);
+        
                                 alignAjax = $.ajax({
                                     url: urltmalign,
                                     type: 'POST',
@@ -25767,7 +25906,7 @@ var icn3d = (function (exports) {
             $.when.apply(undefined, ajaxArray).then(function() {
                 let  dataArray =(chainidPairArray.length == 1) ? [arguments] : Array.from(arguments);
                 ic.qt_start_end = []; // reset the alignment
-                ic.chainalignParserCls.downloadChainalignmentPart2bRealign(dataArray, chainidPairArray);
+                ic.chainalignParserCls.downloadChainalignmentPart2bRealign(dataArray, chainidPairArray);               
             })
             .fail(function() {
                 alert("These structures can NOT be aligned to each other...");
@@ -25792,7 +25931,7 @@ var icn3d = (function (exports) {
 
             if(bPredefined) {
                 predefinedResArray = me.cfg.resdef.trim().replace(/\+/gi, ' ').split('; ');
-
+                
                 if(predefinedResArray.length != chainidArray.length - 1) {
                    alert("Please make sure the number of chains and the lines of predefined residues are the same...");
                    return;
@@ -25814,7 +25953,7 @@ var icn3d = (function (exports) {
 
                 let  chainid = mmdbid + chainidArray[i].substr(pos);
                 if(i == 0) chainid_t = chainid;
-
+                
                 if(!ic.chainsSeq[chainid]) {
                     //alert("Please select one chain per structure and try it again...");
                     //return;
@@ -25844,7 +25983,7 @@ var icn3d = (function (exports) {
                         if(!struct2resid[chainidpair]) struct2resid[chainidpair] = {};
 
                         // master
-                        resiArray = predefinedResPair[0].split(",");
+                        resiArray = predefinedResPair[0].split(",");        
                         result = thisClass.getSeqCoorResid(resiArray, chainid_t, base_t);
 
                         hAtoms = me.hashUtilsCls.unionHash(hAtoms, result.hAtoms);
@@ -25903,7 +26042,7 @@ var icn3d = (function (exports) {
                         }
 
                         //if(!bPredefined) {
-                            result = thisClass.getSeqCoorResid(resiArray, chainid, base);
+                            result = thisClass.getSeqCoorResid(resiArray, chainid, base);         
                             struct2SeqHash[mmdbid] += result.seq;
                             struct2CoorHash[mmdbid] = struct2CoorHash[mmdbid].concat(result.coor);
                             struct2resid[mmdbid] = struct2resid[mmdbid].concat(result.resid);
@@ -25970,9 +26109,18 @@ var icn3d = (function (exports) {
                 $.when.apply(undefined, ajaxArray).then(function() {
                     let  dataArray =(chainidArray.length == 2) ? [arguments] : Array.from(arguments);
                     thisClass.parseChainRealignData(Array.from(dataArray), chainresiCalphaHash2, chainidArray, struct2SeqHash, struct2CoorHash, struct2resid, bRealign);
+
+                    //if(ic.deferredAfMem !== undefined) ic.deferredAfMem.resolve();
+                    if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
+                    if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
                 })
                 .fail(function() {
-                   alert("The realignment did not work...");
+                    alert("The realignment did not work...");
+                    //if(ic.deferredAfMem !== undefined) ic.deferredAfMem.resolve();
+                    if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
+                    if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
+
+                    return;
                    //thisClass.parseChainRealignData(arguments, chainresiCalphaHash2, chainidArray, struct2SeqHash, struct2CoorHash, struct2resid, bRealign);
                 });
             }
@@ -25990,7 +26138,9 @@ var icn3d = (function (exports) {
                         // from VAST neighbor page, use NCBI residue number
                         //if(me.cfg.usepdbnum === false) k += base - 1;
 
-                        let seqIndex = k - base;
+                        //let seqIndex = k - base;
+                        let seqIndex = ic.setSeqAlignCls.getPosFromResi(chainid, k);
+
                         if(ic.bNCBI) {
                             let atom = ic.firstAtomObjCls.getFirstAtomObj(ic.residues[chainid + '_' + k]);
                             if(atom && atom.resiNCBI) seqIndex = atom.resiNCBI - 1;
@@ -26011,7 +26161,9 @@ var icn3d = (function (exports) {
                     // from VAST neighbor page, use NCBI residue number
                     //if(me.cfg.usepdbnum === false) k += base - 1;
 
-                    let seqIndex = k - base;
+                    //let seqIndex = k - base;
+                    let seqIndex = ic.setSeqAlignCls.getPosFromResi(chainid, k);
+
                     if(ic.bNCBI) {
                         let atom = ic.firstAtomObjCls.getFirstAtomObj(ic.residues[chainid + '_' + k]);
                         if(atom && atom.resiNCBI) seqIndex = atom.resiNCBI - 1;
@@ -26257,14 +26409,14 @@ var icn3d = (function (exports) {
             this.downloadChainalignmentPart3(chainresiCalphaHash2, chainidArray, ic.hAtoms);
         }
 
-        setMsa(chainidArray, bRealign) { let  ic = this.icn3d, me = ic.icn3dui;
+        setMsa(chainidArray, bVastplus, bRealign) { let  ic = this.icn3d, me = ic.icn3dui;
             // get aligned length for each pair
             let index_alignLen = [];
             for(let index = 1, indexl = chainidArray.length; index < indexl; ++index) {
                 let alignLen = 0;
                 if(ic.qt_start_end && ic.qt_start_end[index - 1]) {
                     for(let i = 0, il = ic.qt_start_end[index - 1].length; i < il; ++i) { 
-                        alignLen += ic.qt_start_end[index - 1][i].q_end - ic.qt_start_end[index - 1][i].q_start + 1;
+                        alignLen += parseInt(ic.qt_start_end[index - 1][i].q_end) - parseInt(ic.qt_start_end[index - 1][i].q_start) + 1;
                     }
                 }
                 index_alignLen.push({index: index, alignLen: alignLen});
@@ -26274,6 +26426,11 @@ var icn3d = (function (exports) {
             });
 
             let hAtomsAll = ic.setSeqAlignCls.setSeqAlignChainForAll(chainidArray, index_alignLen, bRealign);
+
+            if(bVastplus) {
+                ic.opts['color'] = 'identity';
+                ic.setColorCls.setColorByOptions(ic.opts, hAtomsAll);
+            }
 
             let  bReverse = false;
             let  seqObj = me.htmlCls.alignSeqCls.getAlignSequencesAnnotations(Object.keys(ic.alnChains), undefined, undefined, false, undefined, bReverse);
@@ -26427,19 +26584,21 @@ var icn3d = (function (exports) {
             me.htmlCls.dialogCls.openDlg('dl_alignment', 'Select residues in aligned sequences');
 
             ic.drawCls.draw();
+            ic.transformCls.zoominSelection();
+            
             ic.hlUpdateCls.updateHlAll();
 
             if(ic.deferredRealignByStruct !== undefined) ic.deferredRealignByStruct.resolve();
         }
 
-        transformStructure(mmdbid, index, alignType) { let  ic = this.icn3d, me = ic.icn3dui;
+        transformStructure(mmdbid, index, alignType, bForce) { let  ic = this.icn3d, me = ic.icn3dui;
             let chainidArray = ic.structures[mmdbid];
 
             for(let i = 0, il = chainidArray.length; i < il; ++i) {
                 for(let serial in ic.chains[chainidArray[i]]) {
                     let atm = ic.atoms[serial];
                     //if(ic.q_rotation !== undefined && ic.t_trans_add.length > 0 && !me.cfg.resnum && !me.cfg.resdef) {
-                    if(ic.q_rotation !== undefined && !me.cfg.resnum && !me.cfg.resdef) {
+                    if(ic.q_rotation !== undefined && (bForce || (!me.cfg.resnum && !me.cfg.resdef)) ) {
                         atm = this.transformAtom(atm, index, alignType);
                     }
                 }
@@ -26546,7 +26705,9 @@ var icn3d = (function (exports) {
             for(let i = 0, il = chainidArray.length; i < il; ++i) {
                 let  chainid = chainidArray[i];
                 let  pos = chainid.indexOf('_');
-                let struct = chainid.substr(0, pos).toUpperCase();
+                let struct = chainid.substr(0, pos); 
+                if(struct != 'stru') struct = struct.toUpperCase();
+
                 if(!struct2cnt.hasOwnProperty(struct)) {
                     struct2cnt[struct] = 1;
                 }
@@ -26582,7 +26743,7 @@ var icn3d = (function (exports) {
 
             let  url_t;
             if(ic.mmdbid_t.length > 5) {
-                url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_t + "-F1-model_v2.pdb";
+                url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_t + "-F1-model_v3.pdb";
 
                 targetAjax = $.ajax({
                     url: url_t,
@@ -26620,7 +26781,7 @@ var icn3d = (function (exports) {
 
                 let  url_q, queryAjax;
                 if(ic.mmdbid_q.length > 5) {
-                    url_q = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_q + "-F1-model_v2.pdb";
+                    url_q = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_q + "-F1-model_v3.pdb";
 
                     queryAjax = $.ajax({
                         url: url_q,
@@ -26703,7 +26864,7 @@ var icn3d = (function (exports) {
             // index = 0: the mmdb data of target
             let  targetData = dataArray[0][0];
             let header = 'HEADER                                                        ' + mmdbid_t + '\n';
-            if(mmdbid_t.length > 5) targetData = header + targetData;
+            if(isNaN(mmdbid_t) && mmdbid_t.length > 5) targetData = header + targetData;
 
             ic.t_trans_add = [];
             ic.q_trans_sub = [];
@@ -26725,7 +26886,7 @@ var icn3d = (function (exports) {
                 let  mmdbid_q = chainidArray[index].substr(0, pos).toUpperCase();
 
                 let header = 'HEADER                                                        ' + mmdbid_q + '\n';
-                if(mmdbid_q.length > 5) queryData = header + queryData;
+                if(isNaN(mmdbid_q) && mmdbid_q.length > 5) queryData = header + queryData;
 
                 if(queryData !== undefined && JSON.stringify(queryData).indexOf('Oops there was a problem') === -1
                     ) {
@@ -26910,7 +27071,7 @@ var icn3d = (function (exports) {
             }
         }
 
-        downloadMmdbAf(idlist, bQuery) { let  ic = this.icn3d, me = ic.icn3dui;
+        downloadMmdbAf(idlist, bQuery, vastplusAtype) { let  ic = this.icn3d, me = ic.icn3dui;
             let  thisClass = this;
 
             ic.deferredMmdbaf = $.Deferred(function() {
@@ -26923,7 +27084,7 @@ var icn3d = (function (exports) {
                 let structure = ic.structArray[i];
 
                 if(isNaN(structure) && structure.length > 5) {
-                    url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.structArray[i] + "-F1-model_v2.pdb";
+                    url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.structArray[i] + "-F1-model_v3.pdb";
 
                     targetAjax = $.ajax({
                         url: url_t,
@@ -26954,8 +27115,8 @@ var icn3d = (function (exports) {
             //https://stackoverflow.com/questions/5518181/jquery-deferreds-when-and-the-fail-callback-arguments
             $.when.apply(undefined, ajaxArray).then(function() {
               let  dataArray =(ic.structArray.length == 1) ? [arguments] : Array.from(arguments);
-              thisClass.parseMMdbAfData(dataArray, ic.structArray, bQuery);
-              ic.ParserUtilsCls.hideLoading();
+              thisClass.parseMMdbAfData(dataArray, ic.structArray, bQuery, vastplusAtype);
+              if(vastplusAtype === undefined) ic.ParserUtilsCls.hideLoading();
             })
             .fail(function() {
                 alert("There are some problems in retrieving the coordinates...");
@@ -26965,13 +27126,13 @@ var icn3d = (function (exports) {
           return ic.deferredMmdbaf.promise();
         }
 
-        parseMMdbAfData(dataArray, structArray, bQuery) { let  ic = this.icn3d, me = ic.icn3dui;
+        parseMMdbAfData(dataArray, structArray, bQuery, vastplusAtype) { let  ic = this.icn3d, me = ic.icn3dui;
 
             let queryDataArray = [];
             for(let index = 0, indexl = structArray.length; index < indexl; ++index) {
                 let  queryData = dataArray[index][0];
                 let header = 'HEADER                                                        ' + structArray[index] + '\n';
-                if(structArray[index].length > 5) queryData = header + queryData;
+                if(isNaN(structArray[index]) && structArray[index].length > 5) queryData = header + queryData;
 
                 if(queryData !== undefined && JSON.stringify(queryData).indexOf('Oops there was a problem') === -1
                     ) {
@@ -26988,6 +27149,8 @@ var icn3d = (function (exports) {
             let  hAtoms = {}, hAtomsTmp = {};
             let  bLastQuery = false;
 
+            ic.opts['color'] = (structArray.length > 1) ? 'structure' : ((structArray[0].length > 5) ? 'confidence' : 'chain');
+
             for(let i = 0, il = structArray.length; i < il; ++i) {
                 if(i == structArray.length - 1) bLastQuery = true;
 
@@ -27000,23 +27163,24 @@ var icn3d = (function (exports) {
                     targetOrQuery = 'query';
                     bAppend = true; 
                 }
-
+                
                 //if(structArray[i].length > 4) {
-                if(structArray[i].length > 5) {  // PDB ID plus postfix could be 5 
-                    let bNoDssp = true;
+                if(isNaN(structArray[i]) && structArray[i].length > 5) {  // PDB ID plus postfix could be 5 
+                    //let bNoDssp = true;
+                    let bNoDssp = false; // get secondary structure info
                     hAtomsTmp = ic.pdbParserCls.loadPdbData(queryDataArray[i], structArray[i], false, bAppend, targetOrQuery, bLastQuery, bNoDssp);
                 }
-                else {              
+                else {         
                     let bNoSeqalign = true;
                     hAtomsTmp = ic.mmdbParserCls.parseMmdbData(queryDataArray[i], targetOrQuery, undefined, undefined, bLastQuery, bNoSeqalign);
                 }
                         
                 hAtoms = me.hashUtilsCls.unionHash(hAtoms, hAtomsTmp);
             }
-
+            
             // calculate secondary structures with applyCommandDssp
-            if(bQuery && me.cfg.matchedchains) {
-                $.when(ic.pdbParserCls.applyCommandDssp(true)).then(function() {
+            if(bQuery && me.cfg.matchedchains) {          
+               // $.when(ic.pdbParserCls.applyCommandDssp(true)).then(function() {
                     let bRealign = true, bPredefined = true;
                     ic.realignParserCls.realignChainOnSeqAlign(undefined, ic.chainidArray, bRealign, bPredefined);
                     // reset annotations
@@ -27025,10 +27189,23 @@ var icn3d = (function (exports) {
                     if($('#' + ic.pre + 'dl_selectannotations').dialog( 'isOpen' )) {
                         $('#' + ic.pre + 'dl_selectannotations').dialog( 'close' );
                     }
-               });
+               //});
+            }
+            else if(vastplusAtype !== undefined) {
+                // vastplusAtype: 0: VAST, global, 1: VAST, invarant core, 2: TM-align, global
+                // VAST+ on the fly
+                let structArray = Object.keys(ic.structures);
+                ic.vastplusCls.vastplusAlign(structArray, vastplusAtype);
+
+                //ic.pdbParserCls.loadPdbDataRender(true);
+            }
+            else ;
+
+            if(Object.keys(ic.structures).length == 1 && me.cfg.mmdbafid.length > 5) {
+                ic.ParserUtilsCls.checkMemProtein(me.cfg.mmdbafid);
             }
             else {
-                ic.pdbParserCls.applyCommandDssp(true);
+                if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
             }
         }
     }
@@ -28244,7 +28421,7 @@ var icn3d = (function (exports) {
         }
 
         //Run commands one after another. The commands can be semicolon ';' or new line '\n' separated.
-        loadScript(dataStr, bStatefile) { let ic = this.icn3d; ic.icn3dui;
+        loadScript(dataStr, bStatefile, bStrict) { let ic = this.icn3d; ic.icn3dui;
           // allow the "loading structure..." message to be shown while loading script
           ic.bCommandLoad = true;
 
@@ -28255,7 +28432,7 @@ var icn3d = (function (exports) {
           dataStr =(bStatefile) ? dataStr.replace(/\+/g, ' ') : dataStr.replace(/\+/g, ' ').replace(/;/g, '\n');
 
           let  preCommands = [];
-          if(ic.commands.length > 0) preCommands[0] = ic.commands[0];
+          if(!bStrict && ic.commands.length > 0) preCommands[0] = ic.commands[0];
 
           let  commandArray = dataStr.trim().split('\n');
           ic.commands = commandArray;
@@ -28288,16 +28465,16 @@ var icn3d = (function (exports) {
               this.replayFirstStep(ic.CURRENTNUMBER);
           }
           else {
-              this.execCommands(ic.CURRENTNUMBER, ic.STATENUMBER-1, ic.STATENUMBER);
+              this.execCommands(ic.CURRENTNUMBER, ic.STATENUMBER-1, ic.STATENUMBER, bStrict);
           }
         }
 
         //Execute a list of commands. "steps" is the total number of commands.
-        execCommands(start, end, steps) { let ic = this.icn3d; ic.icn3dui;
+        execCommands(start, end, steps, bStrict) { let ic = this.icn3d; ic.icn3dui;
             ic.bRender = false;
 
             // fresh start
-            ic.reinitAfterLoad();
+            if(!bStrict) ic.reinitAfterLoad();
 
             //ic.opts = me.hashUtilsCls.cloneHash(ic.opts);
 
@@ -28476,6 +28653,40 @@ var icn3d = (function (exports) {
                   }
 
                   return;
+              }
+              else if(ic.commands[i].trim().indexOf('set annotation ptm') == 0 ) { // the command may have "|||{"factor"...
+                let  strArray = ic.commands[i].split("|||");
+
+                if(Object.keys(ic.proteins).length > 0 &&(ic.bAjaxPTM === undefined || !ic.bAjaxPTM) ) {
+                    $.when(thisClass.applyCommandPTM(strArray[0].trim())).then(function() {
+                        thisClass.execCommandsBase(i + 1, end, steps);
+                    });
+                }
+                else {
+                    if(Object.keys(ic.proteins).length > 0) {
+                        thisClass.applyCommandPTM(strArray[0].trim());
+                    }
+
+                    this.execCommandsBase(i + 1, end, steps);
+                }
+
+                return;
+              }
+              else if(ic.commands[i].trim().indexOf('ig refnum on') == 0 ) { 
+                let  strArray = ic.commands[i].split("|||");
+
+                if(Object.keys(ic.resid2refnum).length == 0) {
+                    $.when(thisClass.applyCommandRefnum(strArray[0].trim())).then(function() {
+                        thisClass.execCommandsBase(i + 1, end, steps);
+                    });
+                }
+                else {
+                    thisClass.applyCommandRefnumBase(strArray[0].trim());
+
+                    this.execCommandsBase(i + 1, end, steps);
+                }
+
+                return;
               }
               else if(ic.commands[i].trim().indexOf('set annotation 3ddomain') == 0) { // the command may have "|||{"factor"...
                   let  strArray = ic.commands[i].split("|||");
@@ -28707,6 +28918,8 @@ var icn3d = (function (exports) {
                     ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
                 }
 
+                me.cfg.aligntool = 'vast';
+
                 $.when(thisClass.applyCommandRealignByStruct(command)).then(function() {
                    thisClass.execCommandsBase(i + 1, end, steps);
                 });
@@ -28714,18 +28927,20 @@ var icn3d = (function (exports) {
                 return;
               }
               else if(ic.commands[i].trim().indexOf('realign on tmalign') == 0) {
-                let  strArray = ic.commands[i].split("|||");
-                let  command = strArray[0].trim();
-
-                let  paraArray = command.split(' | ');
-                if(paraArray.length == 2) {
-                    let  nameArray = paraArray[1].split(',');
-                    ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
-                }
+                thisClass.getHAtoms(ic.commands[i]);
 
                 me.cfg.aligntool = 'tmalign';
 
-                $.when(thisClass.applyCommandRealignByStruct(command)).then(function() {
+                $.when(thisClass.applyCommandRealignByStruct(ic.commands[i])).then(function() {
+                   thisClass.execCommandsBase(i + 1, end, steps);
+                });
+
+                return;
+              }
+              else if(ic.commands[i].trim().indexOf('realign on vastplus') == 0) {
+                thisClass.getHAtoms(ic.commands[i]);
+
+                $.when(thisClass.applyCommandRealignByVastplus(ic.commands[i])).then(function() {
                    thisClass.execCommandsBase(i + 1, end, steps);
                 });
 
@@ -28867,6 +29082,12 @@ var icn3d = (function (exports) {
                         else if(lastCommand.indexOf('set annotation snp') == 0) {
                             thisClass.applyCommandSnp(lastCommand);
                         }
+                        else if(lastCommand.indexOf('set annotation ptm') == 0) {
+                            thisClass.applyCommandPTM(lastCommand);
+                        }
+                        else if(lastCommand.indexOf('ig refnum on') == 0) {
+                            thisClass.applyCommandRefnum(lastCommand);
+                        }
                         else if(lastCommand.indexOf('set annotation 3ddomain') == 0) {
                             thisClass.applyCommand3ddomain(lastCommand);
                         }
@@ -28917,6 +29138,9 @@ var icn3d = (function (exports) {
                                 let  nameArray = paraArray[1].split(',');
                                 ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
                             }
+
+                            me.cfg.aligntool = 'vast';
+
                             thisClass.applyCommandRealignByStruct(lastCommand);
                         }
                         else if(lastCommand.indexOf('realign on tmalign') == 0) {
@@ -28929,6 +29153,15 @@ var icn3d = (function (exports) {
                             me.cfg.aligntool = 'tmalign';
 
                             thisClass.applyCommandRealignByStruct(lastCommand);
+                        }
+                        else if(lastCommand.indexOf('realign on vastplus') == 0) {
+                            let  paraArray = lastCommand.split(' | ');
+                            if(paraArray.length == 2) {
+                                let  nameArray = paraArray[1].split(',');
+                                ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
+                            }
+                            
+                            thisClass.applyCommandRealignByVastplus(lastCommand);
                         }
                         else if(lastCommand.indexOf('graph interaction pairs') == 0) {
                             thisClass.applyCommandGraphinteraction(lastCommand);
@@ -28987,10 +29220,11 @@ var icn3d = (function (exports) {
             }
             else if(command.indexOf('load pdb') !== -1) {
               me.cfg.pdbid = id;
+
               ic.pdbParserCls.downloadPdb(id);
             }
             else if(command.indexOf('load af') !== -1) {
-              me.cfg.afid = id;
+              me.cfg.afid = id;  
               ic.pdbParserCls.downloadPdb(id, true);
             }
             else if(command.indexOf('load opm') !== -1) {
@@ -29058,7 +29292,14 @@ var icn3d = (function (exports) {
             }
             else if(command.indexOf('load alignment') !== -1) {
               me.cfg.align = id;
-              ic.alignParserCls.downloadAlignment(id);
+
+              if(me.cfg.inpara.indexOf('atype=2') == -1) {
+                ic.alignParserCls.downloadAlignment(me.cfg.align);
+              }
+              else {
+                let vastplusAtype = 2; // Tm-align
+                ic.chainalignParserCls.downloadMmdbAf(me.cfg.align, undefined, vastplusAtype);
+              }
             }
             else if(command.indexOf('load chainalignment') !== -1) {
               //load chainalignment [id] | resnum [resnum] | resdef [resnum] | aligntool [aligntool] | parameters [inpara]
@@ -29161,6 +29402,7 @@ var icn3d = (function (exports) {
         }
 
         applyCommandRealignBase(command) { let ic = this.icn3d; ic.icn3dui;
+            //ic.drawCls.draw();
             ic.realignParserCls.realignOnSeqAlign();
         }
 
@@ -29176,6 +29418,7 @@ var icn3d = (function (exports) {
         }
 
         applyCommandRealignByStructBase(command) { let ic = this.icn3d; ic.icn3dui;
+            ic.drawCls.draw();
             ic.realignParserCls.realignOnStructAlign();
         }
 
@@ -29188,6 +29431,22 @@ var icn3d = (function (exports) {
           }); // end of me.deferred = $.Deferred(function() {
 
           return ic.deferredRealignByStruct.promise();
+        }
+
+        applyCommandRealignByVastplusBase(command) { let ic = this.icn3d; ic.icn3dui;
+            //ic.drawCls.draw();
+            ic.vastplusCls.realignOnVastplus();
+        }
+
+        applyCommandRealignByVastplus(command) { let ic = this.icn3d; ic.icn3dui;
+          let  thisClass = this;
+
+          // chain functions together
+          ic.deferredRealignByVastplus = new $.Deferred(function() {
+             thisClass.applyCommandRealignByVastplusBase(command);
+          }); // end of me.deferred = $.Deferred(function() {
+
+          return ic.deferredRealignByVastplus.promise();
         }
 
         applyCommandAfmapBase(command, bFull) { let ic = this.icn3d; ic.icn3dui;
@@ -29322,6 +29581,41 @@ var icn3d = (function (exports) {
           return ic.deferredSnp.promise();
         }
 
+        applyCommandPTMBase(command) { let ic = this.icn3d; ic.icn3dui;
+            // chain functions together
+            let  pos = command.lastIndexOf(' '); // set annotation clinvar
+            command.substr(pos + 1);
+      
+            ic.annotationCls.setAnnoTabPTM();
+        }
+
+        applyCommandPTM(command) { let ic = this.icn3d; ic.icn3dui;
+            let  thisClass = this;
+      
+            // chain functions together
+            ic.deferredPTM = $.Deferred(function() {
+                thisClass.applyCommandPTMBase(command);
+            }); // end of me.deferred = $.Deferred(function() {
+      
+            return ic.deferredPTM.promise();
+        }
+
+        applyCommandRefnumBase(command) { let ic = this.icn3d; ic.icn3dui;
+            // chain functions together
+            ic.refnumCls.showIgRefNum();
+        }
+
+        applyCommandRefnum(command) { let ic = this.icn3d; ic.icn3dui;
+            let  thisClass = this;
+      
+            // chain functions together
+            ic.deferredRefnum = $.Deferred(function() {
+                thisClass.applyCommandRefnumBase(command);
+            }); // end of me.deferred = $.Deferred(function() {
+      
+            return ic.deferredRefnum.promise();
+        }
+
         applyCommand3ddomainBase(command) { let ic = this.icn3d; ic.icn3dui;
           // chain functions together
           let  pos = command.lastIndexOf(' ');
@@ -29398,8 +29692,8 @@ var icn3d = (function (exports) {
             // simple if all atoms are modified
             //if( me.cfg.command === undefined &&(steps === 1 ||(Object.keys(ic.hAtoms).length === Object.keys(ic.atoms).length) ||(ic.optsHistory[steps - 1] !== undefined && ic.optsHistory[steps - 1].hasOwnProperty('hlatomcount') && ic.optsHistory[steps - 1].hlatomcount === Object.keys(ic.atoms).length) ) ) {
             if(steps === 1
-              ||(Object.keys(ic.hAtoms).length === Object.keys(ic.atoms).length)
-              ||(ic.optsHistory[steps - 1] !== undefined && ic.optsHistory[steps - 1].hasOwnProperty('hlatomcount') && ic.optsHistory[steps - 1].hlatomcount === Object.keys(ic.atoms).length) ) {
+              || (ic.hAtoms && ic.atoms && Object.keys(ic.hAtoms).length === Object.keys(ic.atoms).length)
+              || (ic.optsHistory[steps - 1] !== undefined && ic.optsHistory[steps - 1].hasOwnProperty('hlatomcount') && ic.optsHistory[steps - 1].hlatomcount === Object.keys(ic.atoms).length) ) {
         // the following code caused problem for many links,e.g., https://structure.ncbi.nlm.nih.gov/icn3d/share.html?17g3r1JDvZ7ZL39e6
         //        if(steps === 1) {
                     // assign styles and color using the options at that stage
@@ -29490,6 +29784,17 @@ var icn3d = (function (exports) {
 
               ic.bRender = true;
               ic.drawCls.draw();
+        }
+
+        getHAtoms(fullcommand) { let ic = this.icn3d; ic.icn3dui;
+            let  strArray = fullcommand.split("|||");
+            let  command = strArray[0].trim();
+
+            let  paraArray = command.split(' | ');
+            if(paraArray.length == 2) {
+                let  nameArray = paraArray[1].split(',');
+                ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
+            }
         }
     }
 
@@ -29694,7 +29999,9 @@ var icn3d = (function (exports) {
         constructor(icn3d) {
     		this.icn3d = icn3d;
 
-            this.dcut = 8; // threshold for C-alpha interactions
+            //this.dcut = 8; // threshold for C-alpha interactions
+    		// It seemed the threshold 7 angstrom works better
+    		this.dcut = 7; // threshold for C-alpha interactions
 
     		this.MAX_SSE = 512;
 
@@ -29712,13 +30019,22 @@ var icn3d = (function (exports) {
             this.group_num = [];
             this.group_num.length = this.MAX_SSE;
 
-            this.split_ratio = 0.0;			//let // splitting ratio
-            this.min_size = 0;				// min required size of a domain
-            this.min_sse = 0;				// min number of SSEs required in a domain
-            this.max_csz = 0;				// max size of a cut, i.e. number of points
+            // this.split_ratio = 0.0;			//let // splitting ratio
+            // this.min_size = 0;				// min required size of a domain
+            // this.min_sse = 0;				// min number of SSEs required in a domain
+            // this.max_csz = 0;				// max size of a cut, i.e. number of points
+            // this.mean_cts = 0.0;				// mean number of contacts in a domain
+            // this.c_delta = 0;				// cut set parameter
+            // this.nc_fact = 0.0;				// size factor for internal contacts
+
+    		this.split_ratio = 0.25;			//let // splitting ratio
+            this.min_size = 25;				// min required size of a domain
+            this.min_sse = 3;				// min number of SSEs required in a domain
+            this.max_csz = 4;				// max size of a cut, i.e. number of points
             this.mean_cts = 0.0;				// mean number of contacts in a domain
-            this.c_delta = 0;				// cut set parameter
+            this.c_delta = 3;				// cut set parameter
             this.nc_fact = 0.0;				// size factor for internal contacts
+
             //let this.elements[2*this.MAX_SSE];			// sets of this.elements to be split
             this.elements = [];
             this.elements.length = 2*this.MAX_SSE;
@@ -30863,7 +31179,8 @@ var icn3d = (function (exports) {
             if(seqLength > ic.maxAnnoLength) {
                 ic.maxAnnoLength = seqLength;
             }
-            let itemArray = ['giseq', 'cddsite', 'clinvar', 'snp', 'domain', 'interaction', 'custom', 'ssbond', 'crosslink', 'transmem'];
+            //let itemArray = ['giseq', 'cddsite', 'ptm', 'clinvar', 'snp', 'domain', 'interaction', 'custom', 'ssbond', 'crosslink', 'transmem'];
+            let itemArray = ['giseq', 'cddsite', 'clinvar', 'snp', 'ptm', 'ssbond', 'crosslink', 'transmem', 'domain', 'custom', 'interaction'];
             for(let i in itemArray) {
                 let item = itemArray[i];
                 if($("#" + ic.pre + item + "_" + chnid).length) $("#" + ic.pre + item + "_" + chnid).width(divLength);
@@ -31210,6 +31527,7 @@ var icn3d = (function (exports) {
             html += '</div>';
             html2 += '</div>';
             html3 += '</div>';
+
             //if(Object.keys(ic.chains[chnid]).length > 10) {
             if(ic.giSeq[chnid].length > 10) {
                 let atom = ic.firstAtomObjCls.getFirstCalphaAtomObj(ic.chains[chnid]);
@@ -31249,61 +31567,171 @@ var icn3d = (function (exports) {
                     html += '</div>';
                     html += '</div>';
                     html3 += '</div></div>';
+                }         
+                else if(ic.bShowRefnum && ic.chainid2index.hasOwnProperty(chnid)) {              
+                    let result = this.showRefNum(giSeq, chnid);
+                    html += result.html;
+                    html3 += result.html3;
+
+                    let bKabat = true;
+                    result = this.showRefNum(giSeq, chnid, bKabat);
+                    html += result.html;
+                    html3 += result.html3;
                 }
-    /*            
-                else if(chnid == '4YHY_B') {
-                    // test reference num
-                    let resid2refnum = {};
-
-                    let refData = {6: 'A1050', 22: 'B2050', 36: 'C3050', 48: 'C`3250', 61: 'C``3750', 70: 'D4050', 81: 'E5050', 96: 'F6050', 112: 'G7050'};
-
-                    //ic.chainsMapping[chnid][chnid + '_' + resObject2.resi] = resObject1.resn + resObject1.resi;
-                    for(let resi in refData) {
-                        let resid = chnid + '_' + resi;
-                        resid2refnum[resid] = refData[resi];
-                    }
-
-
-                    htmlTmp = '<div class="icn3d-dl_sequence">';
-                    htmlTmp += '<div class="icn3d-residueLine" style="white-space:nowrap;">';
-                    htmlTmp += '<div class="icn3d-annoTitle" anno="0" title="Ig Reference Numbers">Ig Reference Numbers</div>';
-                    htmlTmp += '<span class="icn3d-residueNum"></span>';
-                    html3 += htmlTmp + '<br>';
-                    html += htmlTmp + '<span class="icn3d-seqLine">';
-                    for(let i = 0, il = giSeq.length; i < il; ++i) {
-                        html += this.insertGap(chnid, i, '-');
-                        if(i >= ic.matchedPos[chnid] && i - ic.matchedPos[chnid] < ic.chainsSeq[chnid].length) {
-                          let currResi = ic.chainsSeq[chnid][i - ic.matchedPos[chnid]].resi;
-                          let residueid = chnid + '_' + currResi;
-                          if(!ic.residues.hasOwnProperty(residueid)) {
-                              html += '<span></span>';
-                          }
-                          else {
-                              let atom = ic.firstAtomObjCls.getFirstCalphaAtomObj(ic.residues[residueid]);
-                              let resi_ori = atom.resi_ori;
-                              html += '<span>';
-                              if( resid2refnum.hasOwnProperty(residueid)) {
-                                html += resid2refnum[residueid] + ' ';
-                              }
-                              html += '</span>';
-                          }
-                        }
-                        else {
-                          html += '<span></span>';
-                        }
-                    }
-                    html += '<span class="icn3d-residueNum"></span>';
-                    html += '</span>';
-                    html += '<br>';
-                    html += '</div>';
-                    html += '</div>';
-                    html3 += '</div></div>';
-                }
-    */
             }
+
+            // highlight reference numbers
+            if(ic.bShowRefnum) {
+                ic.hAtoms = ic.hAtomsRefnum;
+                
+                let name = 'refnum_anchors';
+                ic.selectionCls.saveSelection(name, name);
+                
+                ic.hlUpdateCls.updateHlAll();
+            }
+
             $("#" + ic.pre + 'dt_giseq_' + chnid).html(html);
             $("#" + ic.pre + 'ov_giseq_' + chnid).html(html2);
             $("#" + ic.pre + 'tt_giseq_' + chnid).html(html3); // fixed title for scrolling
+        }
+
+        showRefNum(giSeq, chnid, bKabat) {  let ic = this.icn3d, me = ic.icn3dui;
+            let html = '', html3 = '';
+
+            let htmlTmp = '<div class="icn3d-dl_sequence">';
+            htmlTmp += '<div class="icn3d-residueLine" style="white-space:nowrap;">';
+            if(bKabat) {
+                htmlTmp += '<div class="icn3d-annoTitle" anno="0" title="Kabat Reference Numbers">Kabat Ref. No.</div>';
+            }
+            else {
+                htmlTmp += '<div class="icn3d-annoTitle" anno="0" title="IgStRAnD Reference Numbers">IgStRAnD Ref. No.</div>';
+            }
+            htmlTmp += '<span class="icn3d-residueNum"></span>';
+            html3 += htmlTmp + '<br>';
+            html += htmlTmp + '<span class="icn3d-seqLine">';
+            for(let i = 0, il = giSeq.length; i < il; ++i) {
+                html += this.insertGap(chnid, i, '-');
+                if(i >= ic.matchedPos[chnid] && i - ic.matchedPos[chnid] < ic.chainsSeq[chnid].length) {
+                    let currResi = ic.chainsSeq[chnid][i - ic.matchedPos[chnid]].resi;
+                    let residueid = chnid + '_' + currResi;
+                    let domainid = ic.resid2domainid[residueid];
+                    if(!ic.residues.hasOwnProperty(residueid)) {
+                        html += '<span></span>';
+                    }
+                    else {
+                        //let atom = ic.firstAtomObjCls.getFirstCalphaAtomObj(ic.residues[residueid]);
+                        //let resi_ori = atom.resi_ori;
+
+                        //if(ic.resid2refnum.hasOwnProperty(residueid)) {
+                        let refnumLabel = ic.resid2refnum[residueid];
+                        if(refnumLabel) {
+                            let refnumStr_ori = refnumLabel.replace(/'/g, '').substr(1);
+                            let refnumStr;
+                            if(bKabat) {
+                                refnumStr = (ic.domainid2ig2kabat[domainid]) ? ic.domainid2ig2kabat[domainid][refnumStr_ori] : undefined;                            
+                            }
+                            else {
+                                refnumStr = refnumStr_ori;
+                            }
+                        
+                            if(bKabat) {
+                                if(!refnumStr) {                               
+                                    html += '<span></span>';
+                                }
+                                else {
+                                    let refnum = parseInt(refnumStr).toString();
+                                    let color = this.getRefnumColor(refnumStr_ori);
+                                    let colorStr = 'style="color:' + color + '"';
+
+                                    let lastTwo = parseInt(refnum.substr(refnum.length - 2, 2));
+
+                                    if(lastTwo % 2 == 0) {
+                                        html += '<span ' + colorStr + ' title="' + refnumStr + '">' + refnumStr + '</span>';
+                                    }
+                                    else {
+                                        html += '<span ' + colorStr + ' title="' + refnumStr + '">&nbsp;</span>';
+                                    }
+                                }
+                            }
+                            else {
+                                let refnum = parseInt(refnumStr).toString();
+                                let color = this.getRefnumColor(refnumStr_ori);
+                                let colorStr = 'style="color:' + color + '"';
+
+                                let lastTwo = parseInt(refnum.substr(refnum.length - 2, 2));
+
+                                if(lastTwo == 50) {
+                                    // highlight the anchor residues
+                                    ic.hAtomsRefnum = me.hashUtilsCls.unionHash(ic.hAtomsRefnum, ic.residues[residueid]);
+
+                                    html += '<span ' + colorStr + ' title="' + refnumLabel + '"><b>' + refnumLabel.substr(0, 1) + '</b>' + refnumLabel.substr(1) + '</span>';
+                                }
+                                else if(lastTwo % 2 == 0 && lastTwo != 52) {
+                                    let lastTwoStr = isNaN(refnumStr) ? lastTwo + refnumStr.substr(refnumStr.length - 1, 1) : lastTwo;
+                                    html += '<span ' + colorStr + ' title="' + refnumLabel + '">' + lastTwoStr + '</span>';
+                                }
+                                else {
+                                    html += '<span ' + colorStr + ' title="' + refnumLabel + '">&nbsp;</span>';
+                                }
+                            }
+                        }
+                        else {
+                            html += '<span></span>';
+                        }
+                    }
+                }
+                else {
+                    html += '<span></span>';
+                }
+            }
+            html += '<span class="icn3d-residueNum"></span>';
+            html += '</span>';
+            html += '<br>';
+            html += '</div>';
+            html += '</div>';
+            html3 += '</div></div>';
+
+            return {html: html, html3: html3}
+        }
+
+        getRefnumColor(refnumStr) {  let ic = this.icn3d; ic.icn3dui;
+            let prefix = refnumStr.substr(0,2);
+            if(prefix == '10') {
+                return '#000';
+            }
+            else if(prefix == '12') {
+                return '#888';
+            }
+            else if(prefix == '20') {
+                return '#000';
+            }
+            else if(prefix == '30') {
+                return '#888';
+            }
+            else if(prefix == '32') {
+                return '#000';
+            }
+            else if(prefix == '37') {
+                return '#888';
+            }
+            else if(prefix == '40') {
+                return '#000';
+            }
+            else if(prefix == '50') {
+                return '#888';
+            }
+            else if(prefix == '60') {
+                return '#000';
+            }
+            else if(prefix == '70') {
+                return '#888';
+            }
+            else if(prefix == '72') {
+                return '#000';
+            }
+            else if(prefix == '30') {
+                return '#BBB';
+            }
         }
 
         insertGap(chnid, seqIndex, text, bNohtml) {  let ic = this.icn3d; ic.icn3dui;
@@ -33825,6 +34253,9 @@ var icn3d = (function (exports) {
           else if(command == 'set annotation interaction') {
               ic.annotationCls.setAnnoTabInteraction();
           }
+          else if(command == 'set annotation ptm') {
+            ic.annotationCls.setAnnoTabPTM();
+        }
           else if(command == 'set annotation cdd') {
               ic.annotationCls.setAnnoTabCdd();
           }
@@ -33871,6 +34302,9 @@ var icn3d = (function (exports) {
               else if(type == 'site') {
                   ic.annotationCls.hideAnnoTabSite();
               }
+              else if(type == 'ptm') {
+                ic.annotationCls.hideAnnoTabPTM();
+            }
               else if(type == 'interaction') {
                   ic.annotationCls.hideAnnoTabInteraction();
               }
@@ -34057,6 +34491,16 @@ var icn3d = (function (exports) {
           else if(command == 'realign') {
              ic.realignParserCls.realign();
           }
+          else if(command.indexOf('realign predefined ') != -1) {
+            //e.g., realign predefined 1HHO_A,4M7N_A 1,5,10-50 | 1,5,10-50: 2,6,11-51 | 1,5,10-50
+            let str = 'realign predefined ';
+            let chainids_resdef = commandOri.substr(str.length);
+            let pos = chainids_resdef.indexOf(' ');
+            let chainidArray = chainids_resdef.substr(0, pos).split(',');
+            me.cfg.resdef = chainids_resdef.substr(pos + 1).replace(/:/gi, ';'); // should be 1,5,10-50 | 1,5,10-50; 2,6,11-51 | 1,5,10-50
+
+            ic.realignParserCls.realignChainOnSeqAlign(undefined, chainidArray, true, true);
+         }
           else if(command == 'area') {
              ic.analysisCls.calculateArea();
           }
@@ -34823,7 +35267,10 @@ var icn3d = (function (exports) {
             //     $('#' + ic.pre + 'dl_selectannotations').dialog( 'close' );
             // }
           }
-          
+          else if(command.indexOf('ig refnum off') == 0) {
+            ic.refnumCls.hideIgRefNum();
+          }
+
         // special, select ==========
 
           else if(command.indexOf('select displayed set') !== -1) {
@@ -35023,7 +35470,7 @@ var icn3d = (function (exports) {
             else if(cmd.indexOf('realign on seq align') == 0) return 'File > Realign Selection > on Sequence Alignment';
             else if(cmd.indexOf('realign') == 0) return 'File > Realign Selection > Residue by Residue';
             else if(cmd.indexOf('graph interaction pairs') == 0) return hbondIntStr + ' > 2D Graph(Force-Directed)';
-            else if(cmd.indexOf('export canvas') == 0) return 'File > Save Files > iCn3D PNG Image';
+            else if(cmd.indexOf('export canvas') == 0) return 'File > Save File > iCn3D PNG Image';
             else if(cmd == 'export stl file') return printStr + 'STL';
             else if(cmd == 'export vrml file') return printStr + 'VRML(Color)';
             else if(cmd == 'export stl stabilizer file') return printStr + 'STL W/ Stabilizers';
@@ -35069,6 +35516,7 @@ var icn3d = (function (exports) {
             else if(cmd== 'set view overview') return seqAnnoStr + ': "Summary" tab';
             else if(cmd == 'set annotation custom') return seqAnnoStr + ': "Custom" checkbox';
             else if(cmd == 'set annotation interaction') return seqAnnoStr + ': "Interactions" checkbox';
+            else if(cmd == 'set annotation ptm') return seqAnnoStr + ': "PTM" checkbox';
             else if(cmd == 'set annotation cdd') return seqAnnoStr + ': "Conserved Domains" checkbox';
             else if(cmd == 'set annotation site') return seqAnnoStr + ': "Functional Sites" checkbox';
             else if(cmd == 'set annotation ssbond') return seqAnnoStr + ': "Disulfide Bonds" checkbox';
@@ -35357,7 +35805,9 @@ var icn3d = (function (exports) {
                      bResidueId = true;
                    }
                    else {
-                     if(residueStrArray[j][0] === '3' && residueStrArray[j].length > 1 &&(residueStrArray[j].length - 1) % 3 === 0) { // three letter residue string, such as :3LysArg
+                     //if(residueStrArray[j].length > 1 && residueStrArray[j][0] === '3' && (residueStrArray[j].length - 1) % 3 === 0) { // three letter residue string, such as :3LysArg
+                     if(residueStrArray[j].length > 1 && residueStrArray[j][0] === '3' 
+                         && isNaN(residueStrArray[j][1]) && residueStrArray[j][0] !== '-') { // three letter residue string, such as :3LysArg or :3ZN, but not :30 neither :3-10
                        let  tmpStr = residueStrArray[j].toUpperCase();
                        threeLetterResidueStr = tmpStr.substr(1);
                        bResidueArrayThree = true;
@@ -35473,7 +35923,8 @@ var icn3d = (function (exports) {
                                }
                                else if(bResidueArrayThree) {
                                    let  threeLetter = me.utilsCls.residueAbbr2Name(ic.chainsSeq[molecule_chain][s].name);
-                                   chainSeq +=(threeLetter.length == 3) ? threeLetter : '   ';
+
+                                   chainSeq +=(threeLetter.length == 3) ? threeLetter : threeLetter.padEnd(3, '_');
                                }
                                resiArray.push(ic.chainsSeq[molecule_chain][s].resi);
                            }
@@ -36245,6 +36696,36 @@ var icn3d = (function (exports) {
               seqalign = {};
         }
 
+        getPosFromResi(chainid, resi) { let ic = this.icn3d; ic.icn3dui;
+            let pos = undefined; //parseInt(resi);
+
+            for(let i = 0, il = ic.chainsSeq[chainid].length; i < il; ++i) {
+                if(ic.chainsSeq[chainid][i].resi == resi) {
+                    pos = i;
+                    break;
+                }
+            }
+
+            return pos;
+        }
+
+        getResnFromResi(chainid, resi) { let  ic = this.icn3d, me = ic.icn3dui;
+            let pos = this.getPosFromResi(chainid, resi);
+            if(!pos) return '?';
+
+            let resid = chainid + '_' + resi;
+            let resn = '';
+
+            if(ic.residues[resid] === undefined) {
+                resn = (ic.chainsSeq[chainid][pos]) ? ic.chainsSeq[chainid][pos].name : '?';
+            }
+            else {
+                resn = me.utilsCls.residueName2Abbr(ic.firstAtomObjCls.getFirstAtomObj(ic.residues[resid]).resn.substr(0, 3));
+            }
+
+            return resn;
+        }
+
         setSeqAlignChain(chainid, chainIndex, chainidArray) { let  ic = this.icn3d, me = ic.icn3dui;
             let hAtoms = {};
 
@@ -36345,36 +36826,62 @@ var icn3d = (function (exports) {
 
               if(ic.qt_start_end[chainIndex] === undefined) return;
 
-              let  alignIndex = 1;
+              let  alignIndex = 1; // number of residues displayed in seq alignment
               if(!ic.chainsMapping[chainid1]) ic.chainsMapping[chainid1] = {};
               if(!ic.chainsMapping[chainid2]) ic.chainsMapping[chainid2] = {};
-              for(let i = 0, il = ic.qt_start_end[chainIndex].length; i < il; ++i) {
-                  //var start1 = ic.qt_start_end[chainIndex][i].q_start - 1;
-                  //var start2 = ic.qt_start_end[chainIndex][i].t_start - 1;
-                  //var end1 = ic.qt_start_end[chainIndex][i].q_end - 1;
-                  //var end2 = ic.qt_start_end[chainIndex][i].t_end - 1;
 
+              let posChain1 = {}, posChain2 = {};
+             
+              for(let i = 0, il = ic.qt_start_end[chainIndex].length; i < il; ++i) {
+                let  start1, start2, end1, end2;
+                if(bRealign) { // real residue numbers are stored
+                  start1 = parseInt(ic.qt_start_end[chainIndex][i].t_start);
+                  start2 = parseInt(ic.qt_start_end[chainIndex][i].q_start);
+                  end1 = parseInt(ic.qt_start_end[chainIndex][i].t_end);
+                  end2 = parseInt(ic.qt_start_end[chainIndex][i].q_end); 
+                }
+                else {
+                  start1 = parseInt(ic.qt_start_end[chainIndex][i].t_start - 1);
+                  start2 = parseInt(ic.qt_start_end[chainIndex][i].q_start - 1);
+                  end1 = parseInt(ic.qt_start_end[chainIndex][i].t_end - 1);
+                  end2 = parseInt(ic.qt_start_end[chainIndex][i].q_end - 1);  
+                }
+
+                posChain1[start1] = 1;
+                posChain1[end1] = 1;
+
+                posChain2[start2] = 1;
+                posChain2[end2] = 1;
+              }
+
+              for(let i = 0, il = ic.qt_start_end[chainIndex].length; i < il; ++i) {
                   let  start1, start2, end1, end2;
-                  if(bRealign) { // realresidue numbers are stored
-                    start1 = ic.qt_start_end[chainIndex][i].t_start;
-                    start2 = ic.qt_start_end[chainIndex][i].q_start;
-                    end1 = ic.qt_start_end[chainIndex][i].t_end;
-                    end2 = ic.qt_start_end[chainIndex][i].q_end;  
+                  if(bRealign) { // real residue numbers are stored
+                    start1 = parseInt(ic.qt_start_end[chainIndex][i].t_start);
+                    start2 = parseInt(ic.qt_start_end[chainIndex][i].q_start);
+                    end1 = parseInt(ic.qt_start_end[chainIndex][i].t_end);
+                    end2 = parseInt(ic.qt_start_end[chainIndex][i].q_end);
                   }
                   else {
-                    start1 = ic.qt_start_end[chainIndex][i].t_start - 1;
-                    start2 = ic.qt_start_end[chainIndex][i].q_start - 1;
-                    end1 = ic.qt_start_end[chainIndex][i].t_end - 1;
-                    end2 = ic.qt_start_end[chainIndex][i].q_end - 1;  
+                    start1 = parseInt(ic.qt_start_end[chainIndex][i].t_start - 1);
+                    start2 = parseInt(ic.qt_start_end[chainIndex][i].q_start - 1);
+                    end1 = parseInt(ic.qt_start_end[chainIndex][i].t_end - 1);
+                    end2 = parseInt(ic.qt_start_end[chainIndex][i].q_end - 1);  
                   }
 
                   if(i > 0) {
                       let  index1 = alignIndex;
+
                       for(let j = prevIndex1 + 1, jl = start1; j < jl; ++j) {
+                          if(posChain1[j]) continue;
+                          posChain1[j] = 1;
+
                           if(ic.chainsSeq[chainid1] === undefined || ic.chainsSeq[chainid1][j] === undefined) break;
 
-                          let  resi = ic.chainsSeq[chainid1][j].resi;
-                          let  resn = ic.chainsSeq[chainid1][j].name.toLowerCase();
+                          let resi = (bRealign) ? j : ic.chainsSeq[chainid1][j].resi;
+                          let resn = (bRealign) ? this.getResnFromResi(chainid1, j).toLowerCase() : ic.chainsSeq[chainid1][j].name.toLowerCase();
+                          
+                          if(resn == '?') continue;
 
                           color = me.htmlCls.GREY8;
                           classname = 'icn3d-nalign';
@@ -36386,10 +36893,17 @@ var icn3d = (function (exports) {
 
                       let  index2 = alignIndex;
                       for(let j = prevIndex2 + 1, jl = start2; j < jl; ++j) {
+                          if(posChain2[j]) continue;
+                          posChain2[j] = 1;
+
                           if(ic.chainsSeq[chainid2] === undefined || ic.chainsSeq[chainid2] === undefined) break;
                           
-                          let  resi = ic.chainsSeq[chainid2][j].resi;
-                          let  resn = ic.chainsSeq[chainid2][j].name.toLowerCase();
+                          //let  resi = ic.chainsSeq[chainid2][j].resi;
+                          //let  resn = ic.chainsSeq[chainid2][j].name.toLowerCase();
+                          let resi = (bRealign) ? j : ic.chainsSeq[chainid2][j].resi;
+                          let resn = (bRealign) ? this.getResnFromResi(chainid2, j).toLowerCase() : ic.chainsSeq[chainid2][j].name.toLowerCase();
+
+                          if(resn == '?') continue;
 
                           color = me.htmlCls.GREY8;
                           classname = 'icn3d-nalign';
@@ -36426,7 +36940,7 @@ var icn3d = (function (exports) {
                           }
                       }
                   }
-
+                
                   for(let j = 0; j <= end1 - start1; ++j) {
                       if(ic.chainsSeq[chainid1] === undefined || ic.chainsSeq[chainid2] === undefined) break;
 
@@ -36435,13 +36949,10 @@ var icn3d = (function (exports) {
                         resi1 = j + start1;
                         resi2 = j + start2;
 
-                        let resid1 = chainid1 + '_' + resi1;
-                        let resid2 = chainid2 + '_' + resi2;
+                        resn1 = this.getResnFromResi(chainid1, resi1).toUpperCase();
+                        resn2 = this.getResnFromResi(chainid2, resi2).toUpperCase();
 
-                        if(ic.residues[resid1] === undefined || ic.residues[resid2] === undefined) continue;
-
-                        resn1 = me.utilsCls.residueName2Abbr(ic.firstAtomObjCls.getFirstAtomObj(ic.residues[resid1]).resn.substr(0, 3));
-                        resn2 = me.utilsCls.residueName2Abbr(ic.firstAtomObjCls.getFirstAtomObj(ic.residues[resid2]).resn.substr(0, 3));
+                        if(resn1 == '?' || resn2 == '?') continue;
                       }
                       else {
                         if(ic.chainsSeq[chainid1][j + start1] === undefined || ic.chainsSeq[chainid2][j + start2] === undefined) continue;
@@ -36534,23 +37045,22 @@ var icn3d = (function (exports) {
             let start_t = 9999, end_t = -1;
 
             let baseResi = ic.chainsSeq[chainid1][0].resi - 1;
-
             for(let index = 1, indexl = chainidArray.length; index < indexl; ++index) { 
                 let chainIndex = index - 1;
                 if(!ic.qt_start_end[chainIndex]) continue;
 
                 for(let i = 0, il = ic.qt_start_end[chainIndex].length; i < il; ++i) {
                     let  start1, end1;
-                    if(bRealign) { // real residue numbers are stored
-                        start1 = ic.qt_start_end[chainIndex][i].t_start;
-                        end1 = ic.qt_start_end[chainIndex][i].t_end;
-                    }
-                    else {
-                        start1 = ic.qt_start_end[chainIndex][i].t_start - 1;
-                        end1 = ic.qt_start_end[chainIndex][i].t_end - 1;
-                    }
+                    // if(bRealign) { // real residue numbers are stored
+                    //     start1 = ic.qt_start_end[chainIndex][i].t_start;
+                    //     end1 = ic.qt_start_end[chainIndex][i].t_end;
+                    // }
+                    // else {
+                        start1 = parseInt(ic.qt_start_end[chainIndex][i].t_start) - 1;
+                        end1 = parseInt(ic.qt_start_end[chainIndex][i].t_end) - 1;
+                    // }
                     for(let j = start1; j <= end1; ++j) {
-                        let resiPos = j - baseResi;
+                        let resiPos = (bRealign || me.cfg.aligntool != 'tmalign') ? j : j - baseResi;
                         let resi = this.getResi(chainidArray[0], resiPos, bRealign);
                         resi2range_t[resi] = 1;
                         if(j < start_t) start_t = j;
@@ -36558,7 +37068,7 @@ var icn3d = (function (exports) {
                     }
                 }
             }
-
+            
             // TM-align should use "start1 = ic.qt_start_end[chainIndex][i].t_start - 1", but the rest are the same as ""bRealign"
             if(me.cfg.aligntool == 'tmalign') bRealign = true; // real residue numbers are stored
 
@@ -36608,7 +37118,10 @@ var icn3d = (function (exports) {
             for(let j = 0, jl = ic.chainsSeq[chainid1].length; j < jl; ++j) { 
                 let resi = ic.chainsSeq[chainid1][j].resi;
 
-                if((j + baseResi < start_t || j + baseResi > end_t) ) {
+                let jAdjusted = (me.cfg.aligntool != 'tmalign') ? j : j + baseResi;
+
+                //if(j + baseResi < start_t || j + baseResi > end_t) {
+                if(jAdjusted < start_t || jAdjusted > end_t) {    
                     continue;
                 }
 
@@ -36882,16 +37395,21 @@ var icn3d = (function (exports) {
             for(let i = 0, il = ic.qt_start_end[chainIndex].length; i < il; ++i) {
                 let  start1, start2, end1, end2;
                 if(bRealign) { // real residue numbers are stored
-                    start1 = ic.qt_start_end[chainIndex][i].t_start;
-                    start2 = ic.qt_start_end[chainIndex][i].q_start;
-                    end1 = ic.qt_start_end[chainIndex][i].t_end;
-                    end2 = ic.qt_start_end[chainIndex][i].q_end;  
+                    start1 = parseInt(ic.qt_start_end[chainIndex][i].t_start);
+                    start2 = parseInt(ic.qt_start_end[chainIndex][i].q_start);
+                    end1 = parseInt(ic.qt_start_end[chainIndex][i].t_end);
+                    end2 = parseInt(ic.qt_start_end[chainIndex][i].q_end);  
+
+                    // start1 = this.getPosFromResi(chainid1, ic.qt_start_end[chainIndex][i].t_start);
+                    // start2 = this.getPosFromResi(chainid2, ic.qt_start_end[chainIndex][i].q_start);
+                    // end1 = this.getPosFromResi(chainid1, ic.qt_start_end[chainIndex][i].t_end);
+                    // end2 = this.getPosFromResi(chainid2, ic.qt_start_end[chainIndex][i].q_end);
                 }
                 else {
-                    start1 = ic.qt_start_end[chainIndex][i].t_start - 1;
-                    start2 = ic.qt_start_end[chainIndex][i].q_start - 1;
-                    end1 = ic.qt_start_end[chainIndex][i].t_end - 1;
-                    end2 = ic.qt_start_end[chainIndex][i].q_end - 1;  
+                    start1 = parseInt(ic.qt_start_end[chainIndex][i].t_start - 1);
+                    start2 = parseInt(ic.qt_start_end[chainIndex][i].q_start - 1);
+                    end1 = parseInt(ic.qt_start_end[chainIndex][i].t_end - 1);
+                    end2 = parseInt(ic.qt_start_end[chainIndex][i].q_end - 1);  
                 }
 
                 // 1. before the mapped residues
@@ -37210,7 +37728,7 @@ var icn3d = (function (exports) {
           //var n = coordsFrom.length;
           let  n =(coordsFrom.length < coordsTo.length) ? coordsFrom.length : coordsTo.length;
 
-          let  hAtoms = {};
+          let  hAtoms = {}, rmsd;
 
           if(n < 4) alert("Please select at least four residues in each structure...");
           if(n >= 4) {
@@ -37223,11 +37741,16 @@ var icn3d = (function (exports) {
 
                   let  centerFrom = ic.rmsd_suprTmp.trans1;
                   let  centerTo = ic.rmsd_suprTmp.trans2;
-                  let  rmsd = ic.rmsd_suprTmp.rmsd;
+                  rmsd = ic.rmsd_suprTmp.rmsd;
 
                   if(rmsd) {
                       me.htmlCls.clickMenuCls.setLogCmd("realignment RMSD: " + rmsd.toPrecision(4), false);
-                      $("#" + ic.pre + "dl_rmsd").html("<br><b>Realignment RMSD</b>: " + rmsd.toPrecision(4) + " &#8491;<br><br>");
+                      let html = "<br><b>Realignment RMSD</b>: " + rmsd.toPrecision(4) + " &#8491;<br><br>";
+                      if(ic.bAfMem) {
+                        if(window.dialog) window.dialog.dialog( "close" );
+                        html += "<span style='color:red'>Red</span> and <span style='color:blue'>blue</span> membranes indicate <span style='color:red'>extracellular</span> and <span style='color:blue'>intracellular</span> membranes, respectively.<br><br>";
+                      }
+                      $("#" + ic.pre + "dl_rmsd").html(html);
                       if(!me.cfg.bSidebyside) me.htmlCls.dialogCls.openDlg('dl_rmsd', 'Realignment RMSD');
                   }
 
@@ -37275,7 +37798,7 @@ var icn3d = (function (exports) {
               }
           }
 
-          return hAtoms;
+          return {hAtoms: hAtoms, rmsd: rmsd};
         }
 
         getQtStartEndFromRealignResid(chainid_t, chainid_q) { let ic = this.icn3d; ic.icn3dui;
@@ -37300,7 +37823,6 @@ var icn3d = (function (exports) {
                 let resid_t = ic.realignResid[struct_t][i].resid;
                 let pos_t = resid_t.lastIndexOf('_');
                 let resi_t = parseInt(resid_t.substr(pos_t + 1));
-
                 let resid_q = ic.realignResid[struct_q][i].resid;
                 let pos_q = resid_q.lastIndexOf('_');
                 let resi_q = parseInt(resid_q.substr(pos_q + 1));
@@ -37597,8 +38119,8 @@ var icn3d = (function (exports) {
                       let  rmsd = ic.rmsd_supr.rmsd;
 
                       me.htmlCls.clickMenuCls.setLogCmd("RMSD of alignment to OPM: " + rmsd.toPrecision(4), false);
-                      $("#" + ic.pre + "dl_rmsd").html("<br><b>RMSD of alignment to OPM</b>: " + rmsd.toPrecision(4) + " &#8491;<br><br>");
-                      if(!me.cfg.bSidebyside) me.htmlCls.dialogCls.openDlg('dl_rmsd', 'RMSD of alignment to OPM');
+                      //$("#" + ic.pre + "dl_rmsd").html("<br><b>RMSD of alignment to OPM</b>: " + rmsd.toPrecision(4) + " &#8491;<br><br>");
+                      //if(!me.cfg.bSidebyside) me.htmlCls.dialogCls.openDlg('dl_rmsd', 'RMSD of alignment to OPM');
 
                       let  dxymaxsq = 0;
                       for(let i in ic.atoms) {
@@ -37808,7 +38330,8 @@ var icn3d = (function (exports) {
                   me.cfg.command = me.cfg.command.replace(new RegExp('!','g'), id + '_');
               }
               // final step resolved ic.deferred
-              if(me.cfg.mmdbafid === undefined) ic.loadScriptCls.loadScript(me.cfg.command);
+              if(me.cfg.mmdbafid === undefined && me.cfg.afid === undefined) ic.loadScriptCls.loadScript(me.cfg.command, undefined, true);
+              //ic.loadScriptCls.loadScript(me.cfg.command);
           }
           else {
               if(me.deferred !== undefined) me.deferred.resolve(); if(ic.deferred2 !== undefined) ic.deferred2.resolve();
@@ -37835,7 +38358,7 @@ var icn3d = (function (exports) {
                       $("#" + id + "_expand").hide();
                       $("#" + id + "_shrink").show();
 
-                      if(me.cfg.align !== undefined) {
+                      if(me.cfg.align !== undefined && me.cfg.atype != 2) { // atype = 2: dynamic VAST+
                           let  bShowHighlight = false;                  
                           let  seqObj = me.htmlCls.alignSeqCls.getAlignSequencesAnnotations(Object.keys(ic.alnChains), undefined, undefined, bShowHighlight);
                           $("#" + ic.pre + "dl_sequence2").html(seqObj.sequencesHtml);
@@ -37883,6 +38406,94 @@ var icn3d = (function (exports) {
             }
 
             return maxD;
+        }
+
+        checkMemProtein(afid) { let ic = this.icn3d, me = ic.icn3dui;
+          //ic.deferredAfMem = $.Deferred(function() {
+            let  url = me.htmlCls.baseUrl + "vastdyn/vastdyn.cgi?afid2mem=" + afid;
+
+            $.ajax({
+              url: url,
+              dataType: 'jsonp',
+              cache: true,
+              success: function(data) {
+                if(data.pdbid) {
+                  let question = "This is a single-spanning (bitopic) transmembrane protein according to the Membranome database. Do you want to align the protein with the model from Membranome? If you click \"OK\", you can press the letter \"a\" to alternate the structures.";
+                 
+                  if (me.cfg.afmem == 'off') {
+                    // do nothing
+                    if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
+                  }
+                  else if (me.cfg.afmem == 'on' || confirm(question)) {
+                    let  url2 = "https://storage.googleapis.com/membranome-assets/pdb_files/proteins/" + data.pdbid + ".pdb";
+                    $.ajax({
+                      url: url2,
+                      dataType: 'text',
+                      cache: true,
+                      success: function(afMemdata) {
+                          ic.bAfMem = true;
+                          $("#" + me.pre + "togglememli").show(); // show the menu "View > Toggle Membrane"
+
+                          // append the PDB
+                          let pdbid = data.pdbid.substr(0, data.pdbid.indexOf('_'));
+                          let bOpm = true, bAppend = true;
+                          ic.pdbParserCls.loadPdbData(afMemdata, pdbid, bOpm, bAppend);
+
+                          {
+                              if(ic.bSetChainsAdvancedMenu) ic.definedSetsCls.showSets();
+                              if(ic.bAnnoShown) ic.showAnnoCls.showAnnotations();
+                          }
+
+                          // Realign by seqeunce alignment with the residues in "segment", i.e., transmembrane helix
+                          let segment = data.segment;   // e.g., " 361- 379 ( 359- 384)", the first range is trnasmembrane range, 
+                                                        //the second range is the range of the helix
+                          let range = segment.replace(/ /gi, '').split('(')[0]; //361-379
+                          let start_end = range.split('-');
+
+                          ic.hAtoms = {};
+                          ic.dAtoms = {};
+
+                          // get the AlphaFold structure
+                          for(let i in ic.atoms) {
+                            if(ic.atoms[i].structure != pdbid) {
+                                ic.hAtoms[i] = 1;
+                            }
+                            ic.dAtoms[i] = 1;
+                          }
+
+                          // get the transmembrane from the model of Membranome
+                          for(let i = parseInt(start_end[0]); i <= parseInt(start_end[1]); ++i) {
+                            ic.hAtoms = me.hashUtilsCls.unionHash(ic.hAtoms, ic.residues[pdbid + '_A_' + i]);
+                          }
+
+                          ic.realignParserCls.realignOnSeqAlign(pdbid);
+                      },
+                      error : function(xhr, textStatus, errorThrown ) {
+                          console.log("Error in retrieving matched PDB from Membranome...");
+                          //if(ic.deferredAfMem !== undefined) ic.deferredAfMem.resolve();
+                          if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
+                          if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
+                          return;
+                      }
+                    });
+                  }
+                }
+                else {
+                    if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
+                    if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
+                }
+              },
+              error : function(xhr, textStatus, errorThrown ) {
+                  console.log("Error in finding matched PDB in Membranome...");
+                  //if(ic.deferredAfMem !== undefined) ic.deferredAfMem.resolve();
+                  if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
+                  if(ic.deferredOpm !== undefined) ic.deferredOpm.resolve();
+                  return;
+              }
+            });
+          //});
+
+          //return ic.deferredAfMem.promise();
         }
     }
 
@@ -37957,7 +38568,7 @@ var icn3d = (function (exports) {
                },
                success: function(data) {
                    thisClass.loadMmcifData(data, mmcifid);
-                   if(command) ic.loadScriptCls.loadScript(command);
+                   //if(command) ic.loadScriptCls.loadScript(command, undefined, true);
                },
                error : function(xhr, textStatus, errorThrown ) {
                  this.tryCount++;
@@ -38309,9 +38920,6 @@ var icn3d = (function (exports) {
 
                 ic.asuCnt = ic.biomtMatrices.length;
             }
-            else {
-                $("#" + ic.pre + "assemblyWrapper").hide();
-            }
 
             ic.setStyleCls.setAtomStyleByOptions(ic.opts);
             ic.setColorCls.setColorByOptions(ic.opts, ic.atoms);
@@ -38337,8 +38945,8 @@ var icn3d = (function (exports) {
           if(me.bNode) return;
 
           let thisClass = this;
-          $("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "dt_giseq]").add("[id^=" + ic.pre + "dt_custom]").add("[id^=" + ic.pre + "dt_site]").add("[id^=" + ic.pre + "dt_snp]").add("[id^=" + ic.pre + "dt_clinvar]").add("[id^=" + ic.pre + "dt_cdd]").add("[id^=" + ic.pre + "dt_domain]").add("[id^=" + ic.pre + "dt_interaction]").add("[id^=" + ic.pre + "dt_ssbond]").add("[id^=" + ic.pre + "dt_crosslink]").add("[id^=" + ic.pre + "dt_transmem]")
-          .add("[id^=" + ic.pre + "tt_giseq]").add("[id^=" + ic.pre + "tt_custom]").add("[id^=" + ic.pre + "tt_site]").add("[id^=" + ic.pre + "tt_snp]").add("[id^=" + ic.pre + "tt_clinvar]").add("[id^=" + ic.pre + "tt_cdd]").add("[id^=" + ic.pre + "tt_domain]").add("[id^=" + ic.pre + "tt_interaction]").add("[id^=" + ic.pre + "tt_ssbond]").add("[id^=" + ic.pre + "tt_crosslink]").add("[id^=" + ic.pre + "tt_transmem]")
+          $("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "dt_giseq]").add("[id^=" + ic.pre + "dt_custom]").add("[id^=" + ic.pre + "dt_site]").add("[id^=" + ic.pre + "dt_ptm]").add("[id^=" + ic.pre + "dt_snp]").add("[id^=" + ic.pre + "dt_clinvar]").add("[id^=" + ic.pre + "dt_cdd]").add("[id^=" + ic.pre + "dt_domain]").add("[id^=" + ic.pre + "dt_interaction]").add("[id^=" + ic.pre + "dt_ssbond]").add("[id^=" + ic.pre + "dt_crosslink]").add("[id^=" + ic.pre + "dt_transmem]")
+          .add("[id^=" + ic.pre + "tt_giseq]").add("[id^=" + ic.pre + "tt_custom]").add("[id^=" + ic.pre + "tt_site]").add("[id^=" + ic.pre + "tt_ptm]").add("[id^=" + ic.pre + "tt_snp]").add("[id^=" + ic.pre + "tt_clinvar]").add("[id^=" + ic.pre + "tt_cdd]").add("[id^=" + ic.pre + "tt_domain]").add("[id^=" + ic.pre + "tt_interaction]").add("[id^=" + ic.pre + "tt_ssbond]").add("[id^=" + ic.pre + "tt_crosslink]").add("[id^=" + ic.pre + "tt_transmem]")
           .selectable({
               distance: 1, //Tolerance, in pixels, for when selecting should start. If specified, selecting will not start until the mouse has been dragged beyond the specified distance.
               stop: function() { let ic = thisClass.icn3d;
@@ -38391,11 +38999,11 @@ var icn3d = (function (exports) {
               }
           });
 
-          $("[id^=" + ic.pre + "ov_giseq]").add("[id^=" + ic.pre + "ov_custom]").add("[id^=" + ic.pre + "ov_site]").add("[id^=" + ic.pre + "ov_snp]").add("[id^=" + ic.pre + "ov_clinvar]").add("[id^=" + ic.pre + "ov_cdd]").add("[id^=" + ic.pre + "ov_domain]").add("[id^=" + ic.pre + "ov_interaction]").add("[id^=" + ic.pre + "ov_ssbond]").add("[id^=" + ic.pre + "ov_crosslink]").add("[id^=" + ic.pre + "ov_transmem]")
-          .add("[id^=" + ic.pre + "tt_giseq]").add("[id^=" + ic.pre + "tt_custom]").add("[id^=" + ic.pre + "tt_site]").add("[id^=" + ic.pre + "tt_snp]").add("[id^=" + ic.pre + "tt_clinvar]").add("[id^=" + ic.pre + "tt_cdd]").add("[id^=" + ic.pre + "tt_domain]").add("[id^=" + ic.pre + "tt_interaction]").add("[id^=" + ic.pre + "tt_ssbond]").add("[id^=" + ic.pre + "tt_crosslink]").add("[id^=" + ic.pre + "tt_transmem]")
+          $("[id^=" + ic.pre + "ov_giseq]").add("[id^=" + ic.pre + "ov_custom]").add("[id^=" + ic.pre + "ov_site]").add("[id^=" + ic.pre + "ov_ptm]").add("[id^=" + ic.pre + "ov_snp]").add("[id^=" + ic.pre + "ov_clinvar]").add("[id^=" + ic.pre + "ov_cdd]").add("[id^=" + ic.pre + "ov_domain]").add("[id^=" + ic.pre + "ov_interaction]").add("[id^=" + ic.pre + "ov_ssbond]").add("[id^=" + ic.pre + "ov_crosslink]").add("[id^=" + ic.pre + "ov_transmem]")
+          .add("[id^=" + ic.pre + "tt_giseq]").add("[id^=" + ic.pre + "tt_custom]").add("[id^=" + ic.pre + "tt_site]").add("[id^=" + ic.pre + "tt_ptm]").add("[id^=" + ic.pre + "tt_snp]").add("[id^=" + ic.pre + "tt_clinvar]").add("[id^=" + ic.pre + "tt_cdd]").add("[id^=" + ic.pre + "tt_domain]").add("[id^=" + ic.pre + "tt_interaction]").add("[id^=" + ic.pre + "tt_ssbond]").add("[id^=" + ic.pre + "tt_crosslink]").add("[id^=" + ic.pre + "tt_transmem]")
 
-          .add("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "dt_giseq]").add("[id^=" + ic.pre + "dt_custom]").add("[id^=" + ic.pre + "dt_site]").add("[id^=" + ic.pre + "dt_snp]").add("[id^=" + ic.pre + "dt_clinvar]").add("[id^=" + ic.pre + "dt_cdd]").add("[id^=" + ic.pre + "dt_domain]").add("[id^=" + ic.pre + "dt_interaction]").add("[id^=" + ic.pre + "dt_ssbond]").add("[id^=" + ic.pre + "dt_crosslink]").add("[id^=" + ic.pre + "dt_transmem]")
-          .add("[id^=" + ic.pre + "tt_giseq]").add("[id^=" + ic.pre + "tt_custom]").add("[id^=" + ic.pre + "tt_site]").add("[id^=" + ic.pre + "tt_snp]").add("[id^=" + ic.pre + "tt_clinvar]").add("[id^=" + ic.pre + "tt_cdd]").add("[id^=" + ic.pre + "tt_domain]").add("[id^=" + ic.pre + "tt_interaction]").add("[id^=" + ic.pre + "tt_ssbond]").add("[id^=" + ic.pre + "tt_crosslink]").add("[id^=" + ic.pre + "tt_transmem]")
+          .add("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "dt_giseq]").add("[id^=" + ic.pre + "dt_custom]").add("[id^=" + ic.pre + "dt_site]").add("[id^=" + ic.pre + "dt_ptm]").add("[id^=" + ic.pre + "dt_snp]").add("[id^=" + ic.pre + "dt_clinvar]").add("[id^=" + ic.pre + "dt_cdd]").add("[id^=" + ic.pre + "dt_domain]").add("[id^=" + ic.pre + "dt_interaction]").add("[id^=" + ic.pre + "dt_ssbond]").add("[id^=" + ic.pre + "dt_crosslink]").add("[id^=" + ic.pre + "dt_transmem]")
+          .add("[id^=" + ic.pre + "tt_giseq]").add("[id^=" + ic.pre + "tt_custom]").add("[id^=" + ic.pre + "tt_site]").add("[id^=" + ic.pre + "tt_ptm]").add("[id^=" + ic.pre + "tt_snp]").add("[id^=" + ic.pre + "tt_clinvar]").add("[id^=" + ic.pre + "tt_cdd]").add("[id^=" + ic.pre + "tt_domain]").add("[id^=" + ic.pre + "tt_interaction]").add("[id^=" + ic.pre + "tt_ssbond]").add("[id^=" + ic.pre + "tt_crosslink]").add("[id^=" + ic.pre + "tt_transmem]")
 
           .on('click', '.icn3d-seqTitle', function(e) { let ic = thisClass.icn3d;
               e.stopImmediatePropagation();
@@ -38436,7 +39044,7 @@ var icn3d = (function (exports) {
 
           let thisClass = this;
 
-          $("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "giseq]").add("[id^=" + ic.pre + "custom]").add("[id^=" + ic.pre + "site]").add("[id^=" + ic.pre + "clinvar]").add("[id^=" + ic.pre + "snp]").add("[id^=" + ic.pre + "cdd]").add("[id^=" + ic.pre + "domain]").add("[id^=" + ic.pre + "interaction]").add("[id^=" + ic.pre + "ssbond]").add("[id^=" + ic.pre + "crosslink]").add("[id^=" + ic.pre + "transmem]").on('click', '.icn3d-residue', function(e) { let ic = thisClass.icn3d;
+          $("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "giseq]").add("[id^=" + ic.pre + "custom]").add("[id^=" + ic.pre + "site]").add("[id^=" + ic.pre + "ptm]").add("[id^=" + ic.pre + "clinvar]").add("[id^=" + ic.pre + "snp]").add("[id^=" + ic.pre + "cdd]").add("[id^=" + ic.pre + "domain]").add("[id^=" + ic.pre + "interaction]").add("[id^=" + ic.pre + "ssbond]").add("[id^=" + ic.pre + "crosslink]").add("[id^=" + ic.pre + "transmem]").on('click', '.icn3d-residue', function(e) { let ic = thisClass.icn3d;
               e.stopImmediatePropagation();
     /*
               //if($(this).attr('id') === ic.pre + "dl_sequence2") {
@@ -38485,7 +39093,7 @@ var icn3d = (function (exports) {
 
           let thisClass = this;
 
-          $("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "giseq]").add("[id^=" + ic.pre + "custom]").add("[id^=" + ic.pre + "site]").add("[id^=" + ic.pre + "feat]").add("[id^=" + ic.pre + "clinvar]").add("[id^=" + ic.pre + "snp]").add("[id^=" + ic.pre + "cdd]").add("[id^=" + ic.pre + "domain]").add("[id^=" + ic.pre + "interaction]").add("[id^=" + ic.pre + "ssbond]").add("[id^=" + ic.pre + "crosslink]").add("[id^=" + ic.pre + "transmem]").on('click', '.icn3d-seqTitle', function(e) { let ic = thisClass.icn3d;
+          $("#" + ic.pre + "dl_sequence2").add("[id^=" + ic.pre + "giseq]").add("[id^=" + ic.pre + "custom]").add("[id^=" + ic.pre + "site]").add("[id^=" + ic.pre + "ptm]").add("[id^=" + ic.pre + "feat]").add("[id^=" + ic.pre + "clinvar]").add("[id^=" + ic.pre + "snp]").add("[id^=" + ic.pre + "cdd]").add("[id^=" + ic.pre + "domain]").add("[id^=" + ic.pre + "interaction]").add("[id^=" + ic.pre + "ssbond]").add("[id^=" + ic.pre + "crosslink]").add("[id^=" + ic.pre + "transmem]").on('click', '.icn3d-seqTitle', function(e) { let ic = thisClass.icn3d;
               e.stopImmediatePropagation();
 
               //if($(this).attr('id') === ic.pre + "dl_sequence2") {
@@ -38682,7 +39290,7 @@ var icn3d = (function (exports) {
                                 let residueid;
                                 let structure = chainid.substr(0, chainid.indexOf('_'));
                                 for(let i = 0, il = posArray.length; i < il; ++i) {
-                                    if($(that).attr('site') !== undefined) {
+                                    if($(that).attr('site') !== undefined || $(that).attr('ptm') !== undefined) {
                                         if(ic.bNCBI) {
                                             let residNCBI = chainid + '_' +(parseInt(posArray[i])+1).toString();
                                             // AlphaFold domains calculated on-the-fly have no conversion
@@ -39084,6 +39692,8 @@ var icn3d = (function (exports) {
                 ++i;
             }
             ic.interactChainbase = me.hashUtilsCls.unionHash(ic.interactChainbase, chemical_chainid);
+            ic.PTMChainbase = me.hashUtilsCls.unionHash(ic.PTMChainbase, ic.protein_chainid);
+
             ic.ssbondChainbase = me.hashUtilsCls.unionHash(ic.ssbondChainbase, ic.protein_chainid);
             ic.ssbondChainbase = me.hashUtilsCls.unionHash(ic.ssbondChainbase, chemical_chainid);
             ic.crosslinkChainbase = me.hashUtilsCls.unionHash(ic.crosslinkChainbase, ic.protein_chainid);
@@ -39115,8 +39725,10 @@ var icn3d = (function (exports) {
                 //if(proteinName.length > 40) proteinName = proteinName.substr(0, 40) + "...";
                 let categoryStr =(index == 0) ? "<span class='icn3d-annoLargeTitle'><b>Proteins</b>: </span><br><br>" : "";
                 let geneLink =(ic.chainsGene[chnid] && ic.chainsGene[chnid].geneId) ? "(Gene: <a href='https://www.ncbi.nlm.nih.gov/gene/" + ic.chainsGene[chnid].geneId + "' target='_blank' title='" + ic.chainsGene[chnid].geneDesc + "'>" + ic.chainsGene[chnid].geneSymbol + "</a>)" : '';
+                let structure = chnid.substr(0, chnid.indexOf('_'));
+                let chainLink = (structure.length > 5) ? '<a href="https://alphafold.ebi.ac.uk/entry/' + structure + '" target="_blank">' + chnid + '</a>' : chnid;
                 let chainHtml = "<div id='" + ic.pre + "anno_" + chnid + "' class='icn3d-annotation'>" + categoryStr
-                    + "<span style='font-weight:bold;'>Annotations of " + chnid
+                    + "<span style='font-weight:bold;'>Annotations of " + chainLink
                     + "</span>: <a class='icn3d-blue' href='https://www.ncbi.nlm.nih.gov/protein?term="
                     + chnid + "' target='_blank' title='" + fullProteinName + "'>" + proteinName + "</a>"
                     + geneLink + "&nbsp;&nbsp;&nbsp;"
@@ -39129,7 +39741,8 @@ var icn3d = (function (exports) {
                     + this.addButton(chnid, "icn3d-sheetsets", "Sheet Sets", "Define sets for each sheet in this chain and add them to the menu of \"Defined Sets\"", 60, buttonStyle) + "&nbsp;"
                     + this.addButton(chnid, "icn3d-coilsets", "Coil Sets", "Define sets for each coil in this chain and add them to the menu of \"Defined Sets\"", 60, buttonStyle);
                 $("#" + ic.pre + "dl_annotations").append(chainHtml);
-                let itemArray = ['giseq', 'cdd', 'clinvar', 'snp', 'domain', 'site', 'interaction', 'custom', 'ssbond', 'crosslink', 'transmem'];
+                //let itemArray = ['giseq', 'cdd', 'clinvar', 'snp', 'domain', 'site', 'ptm', 'interaction', 'custom', 'ssbond', 'crosslink', 'transmem'];
+                let itemArray = ['giseq', 'cdd', 'clinvar', 'snp', 'site', 'ptm', 'ssbond', 'crosslink', 'transmem', 'domain', 'custom', 'interaction'];
                 // dt: detailed view, hide by default; ov: overview, show by default
                 for(let i in itemArray) {
                     let item = itemArray[i];
@@ -39561,6 +40174,287 @@ var icn3d = (function (exports) {
      * @author Jiyao Wang <wangjiy@ncbi.nlm.nih.gov> / https://github.com/ncbi/icn3d
      */
 
+    class AnnoPTM {
+        constructor(icn3d) {
+            this.icn3d = icn3d;
+        }
+
+        //Show the annotations of CDD domains and binding sites.
+        showPTM(chnid, chnidBase) { let ic = this.icn3d; ic.icn3dui;
+            let thisClass = this;
+
+            // UniProt ID
+            let structure = chnid.substr(0, chnid.indexOf('_'));
+            let chain = chnid.substr(chnid.indexOf('_') + 1);
+
+            // UniProt ID
+            if( structure.length > 5 ) {
+                let url =  "https://www.ebi.ac.uk/proteins/api/features/" + structure;     
+                $.ajax({
+                  url: url,
+                  dataType: 'json',
+                  cache: true,
+                  tryCount : 0,
+                  retryLimit : 0, //1
+                  success: function(data) {
+                    thisClass.parsePTM(data, chnid);
+                    if(ic.deferredPTM !== undefined) ic.deferredPTM.resolve();
+                  },
+                  error : function(xhr, textStatus, errorThrown ) {
+                    this.tryCount++;
+                    if(this.tryCount <= this.retryLimit) {
+                        //try again
+                        $.ajax(this);
+                        return;
+                    }
+
+                    thisClass.getNoPTM(chnid);
+
+                    return;
+                  }
+                });
+            }
+            else { // PDB
+                // get PDB to UniProt mapping
+                // https://www.ebi.ac.uk/pdbe/api/doc/sifts.html
+                // https://www.ebi.ac.uk/pdbe/api/doc/
+                let structLower = structure.substr(0, 4).toLowerCase();
+                let urlMap = "https://www.ebi.ac.uk/pdbe/api/mappings/uniprot/" + structLower;
+
+                $.ajax({
+                  url: urlMap,
+                  dataType: 'json',
+                  cache: true,
+                  success: function(dataMap) {
+                    let UniProtID = '';
+                    if(!ic.UPResi2ResiPosPerChain) ic.UPResi2ResiPosPerChain = {};
+                    ic.UPResi2ResiPosPerChain[chnid] = {};
+                    let mapping = dataMap[structLower].UniProt;
+
+                    let bFound = false;
+                    for(let up in mapping) {
+                        let chainArray = mapping[up].mappings;
+                        if(bFound) break;
+
+                        for(let i = 0, il = chainArray.length; i < il; ++i) {
+                        //"entity_id": 3, "end": { "author_residue_number": null, "author_insertion_code": "", "residue_number": 219 }, "chain_id": "A", "start": { "author_residue_number": 94, "author_insertion_code": "", "residue_number": 1 }, "unp_end": 312, "unp_start": 94, "struct_asym_id": "C"
+                            let chainObj = chainArray[i];
+                            if(chainObj.chain_id == chain) {
+                                let start = chainObj.unp_start;
+                                let end = chainObj.unp_end;
+                                let posStart = chainObj.start.residue_number;
+                                let posEnd = chainObj.end.residue_number;
+
+                                if(posEnd - posStart != end - start) {
+                                    console.log("There might be some issues in the PDB to UniProt residue mapping.");
+                                }
+
+                                for(let j = 0; j <= end - start; ++j) {
+                                    ic.UPResi2ResiPosPerChain[chnid][j + start] = j + posStart - 1; // 0-based
+                                }
+
+                                UniProtID = up;
+                                bFound = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if(UniProtID == '') {
+                        thisClass.getNoPTM(chnid);
+                    }
+                    else {
+                        let url =  "https://www.ebi.ac.uk/proteins/api/features/" + UniProtID;     
+                        $.ajax({
+                            url: url,
+                            dataType: 'json',
+                            cache: true,
+                            tryCount : 0,
+                            retryLimit : 0, //1
+                            success: function(data) {
+                                thisClass.parsePTM(data, chnid);
+                                if(ic.deferredPTM !== undefined) ic.deferredPTM.resolve();
+                            },
+                            error : function(xhr, textStatus, errorThrown ) {
+                                this.tryCount++;
+                                if(this.tryCount <= this.retryLimit) {
+                                    //try again
+                                    $.ajax(this);
+                                    return;
+                                }
+
+                                thisClass.getNoPTM(chnid);
+
+                                return;
+                            }
+                        });
+                    }
+                  },
+                  error : function(xhr, textStatus, errorThrown ) {
+                    thisClass.getNoPTM(chnid);
+                  }
+                });
+            }
+        }
+
+        parsePTM(data, chnid) { let ic = this.icn3d, me = ic.icn3dui;
+
+            if(me.bNode) {
+                //if(!ic.resid2ptm) ic.resid2ptm = {};
+                ic.resid2ptm = {};
+                ic.resid2ptm[chnid] = [];
+            }
+
+            let ptmHash = {};
+            for(let i = 0, il = data.features.length; i < il; ++i) {
+                let feature = data.features[i];
+
+                if(feature.category == 'PTM' && feature.type != 'DISULFID' && feature.type != 'CROSSLNK') {
+                    let title = '';
+                    if(feature.type == 'CARBOHYD') {
+                        //title = 'Glycosylation, ' + feature.description;
+                        title = 'Glycosylation';
+                    }
+                    else if(feature.type == 'LIPID') {
+                        title = 'Lipidation, ' + feature.description;
+                    }
+                    else if(feature.description.indexOf('Phospho') == 0) {
+                        title = 'Phosphorylation';
+                    }
+                    else if(feature.description) {
+                        title = feature.description;
+                    }
+                    else {
+                        title = feature.type;
+                    }
+
+                    if(!ptmHash[title]) ptmHash[title] = [];
+                    ptmHash[title].push(feature);
+                }
+            }
+
+            let index = 0;
+            let html = '', html2 = '', html3 = ''; 
+            html += '<div id="' + ic.pre + chnid + '_ptmseq_sequence" class="icn3d-cdd icn3d-dl_sequence">';
+            html2 += html;
+            html3 += html;
+            let stucture = chnid.substr(0, chnid.indexOf('_'));
+
+            for(let ptm in ptmHash) {
+                let ptmArray = ptmHash[ptm];
+                //"type": "MOD_RES", "category": "PTM", "description": "4-hydroxyproline", "begin": "382", "end": "382",
+                let resPosArray = [];
+                let bCoordinates = false;
+                for(let i = 0, il = ptmArray.length; i < il; ++i) {
+                    let begin = parseInt(ptmArray[i].begin);
+                    let end = parseInt(ptmArray[i].end);
+
+
+                    for(let j = begin; j <= end; ++j) {
+                        if(stucture.length > 5) { // UniProt
+                            resPosArray.push(j - 1); // 0-based
+                        } 
+                        else { // PDB                       
+                            if(ic.UPResi2ResiPosPerChain[chnid][j]) resPosArray.push(ic.UPResi2ResiPosPerChain[chnid][j]);
+                        }
+                        
+                        if(!bCoordinates && ic.residues.hasOwnProperty(chnid + '_' + j)) {
+                            bCoordinates = true;
+                        }
+                    }
+                }
+
+                if(resPosArray.length == 0) continue;
+
+                let resCnt = resPosArray.length;
+                let title = 'PTM: ' + ptm;
+                if(title.length > 17) title = title.substr(0, 17) + '...';
+                let fulltitle = ptm;
+
+                let linkStr = (bCoordinates) ? 'icn3d-link icn3d-blue' : '';
+
+                let htmlTmp2 = '<div class="icn3d-seqTitle ' + linkStr + '" ptm="ptm" posarray="' + resPosArray.toString() + '" shorttitle="' + title + '" setname="' + chnid + '_ptm_' + index + '" anno="sequence" chain="' + chnid + '" title="' + fulltitle + '">' + title + ' </div>';
+                let htmlTmp3 = '<span class="icn3d-residueNum" title="residue count">' + resCnt.toString() + ' Res</span>';
+                let htmlTmp = '<span class="icn3d-seqLine">';
+                html3 += htmlTmp2 + htmlTmp3 + '<br>';
+                html += htmlTmp2 + htmlTmp3 + htmlTmp;
+                html2 += htmlTmp2 + htmlTmp3 + htmlTmp;
+                let pre = 'ptm' + index.toString();
+                //var widthPerRes = ic.seqAnnWidth / ic.maxAnnoLength;
+                let prevEmptyWidth = 0;
+                let prevLineWidth = 0;
+                let widthPerRes = 1;
+                for(let i = 0, il = ic.giSeq[chnid].length; i < il; ++i) {
+                    html += ic.showSeqCls.insertGap(chnid, i, '-');
+                    if(resPosArray.indexOf(i) != -1) {
+                        let cFull = ic.giSeq[chnid][i];
+                        let c = cFull;
+                        if(cFull.length > 1) {
+                            c = cFull[0] + '..';
+                        }
+                        let pos = ic.annoCddSiteCls.getAdjustedResi(i, chnid, ic.matchedPos, ic.chainsSeq, ic.baseResi);
+
+                        html += '<span id="' + pre + '_' + ic.pre + chnid + '_' + pos + '" title="' + c + pos + '" class="icn3d-residue">' + cFull + '</span>';
+                        if(me.bNode) {
+                            let obj = {};
+                            obj[chnid + '_' + pos] = 'PTM: ' + ptm;
+                            ic.resid2ptm[chnid].push(obj);
+                        }
+
+                        html2 += ic.showSeqCls.insertGapOverview(chnid, i);
+                        let emptyWidth =(me.cfg.blast_rep_id == chnid) ? Math.round(ic.seqAnnWidth * i /(ic.maxAnnoLength + ic.nTotalGap) - prevEmptyWidth - prevLineWidth) : Math.round(ic.seqAnnWidth * i / ic.maxAnnoLength - prevEmptyWidth - prevLineWidth);
+                        //if(emptyWidth < 0) emptyWidth = 0;
+                        if(emptyWidth >= 0) {
+                            html2 += '<div style="display:inline-block; width:' + emptyWidth + 'px;">&nbsp;</div>';
+                            html2 += '<div style="display:inline-block; background-color:#000; width:' + widthPerRes + 'px;" title="' + c + pos + '">&nbsp;</div>';
+                            prevEmptyWidth += emptyWidth;
+                            prevLineWidth += widthPerRes;
+                        }
+                    }
+                    else {
+                        html += '<span>-</span>'; //'<span>-</span>';
+                    }
+                }
+                htmlTmp = '<span class="icn3d-residueNum" title="residue count">&nbsp;' + resCnt.toString() + ' Residues</span>';
+                htmlTmp += '</span>';
+                htmlTmp += '<br>';
+                html += htmlTmp;
+                html2 += htmlTmp;
+
+                ++index;
+            }
+
+            html += '</div>';
+            html2 += '</div>';
+            html3 += '</div>';
+
+            $("#" + ic.pre + "dt_ptm_" + chnid).html(html);
+            $("#" + ic.pre + "ov_ptm_" + chnid).html(html2);
+            $("#" + ic.pre + "tt_ptm_" + chnid).html(html3);
+
+            // add here after the ajax call
+            ic.showAnnoCls.enableHlSeq();
+            ic.bAjaxPTM = true;
+        }
+
+        getNoPTM(chnid) { let ic = this.icn3d; ic.icn3dui;
+            console.log( "No PTM data were found for the chain " + chnid + "..." );
+       
+            $("#" + ic.pre + "dt_ptm_" + chnid).html('');
+            $("#" + ic.pre + "ov_ptm_" + chnid).html('');
+            $("#" + ic.pre + "tt_ptm_" + chnid).html('');
+
+            // add here after the ajax call
+            ic.showAnnoCls.enableHlSeq();
+            ic.bAjaxPTM = true;
+            if(ic.deferredPTM !== undefined) ic.deferredPTM.resolve();
+        }
+    }
+
+    /**
+     * @author Jiyao Wang <wangjiy@ncbi.nlm.nih.gov> / https://github.com/ncbi/icn3d
+     */
+
     class AnnoContact {
         constructor(icn3d) {
             this.icn3d = icn3d;
@@ -39845,7 +40739,6 @@ var icn3d = (function (exports) {
                         let result = ic.domain3dCls.c2b_NewSplitChain(atoms);
                         let subdomains = result.subdomains;
                         //let substruct = result.substruct;
-
                         //let jsonStr = ic.domain3dCls.getDomainJsonForAlign(atoms);
                 
                         for(let i = 0, il = subdomains.length; i < il; ++i) {
@@ -40718,7 +41611,7 @@ var icn3d = (function (exports) {
                     $.ajax(this);
                     return;
                 }
-                this.processNoClinvar(chnid);
+                thisClass.processNoClinvar(chnid);
                 //if(ic.deferredClinvar !== undefined) ic.deferredClinvar.resolve();
                 return;
               }
@@ -40873,7 +41766,8 @@ var icn3d = (function (exports) {
             this.setAnnoSeqBase(false);
         }
         setAnnoSeqBase(bShow) {  let ic = this.icn3d; ic.icn3dui;
-            let itemArray = ['site', 'snp', 'clinvar', 'cdd', 'domain', 'interaction', 'ssbond', 'crosslink', 'transmem'];
+            //let itemArray = ['site', 'ptm', 'snp', 'clinvar', 'cdd', 'domain', 'interaction', 'ssbond', 'crosslink', 'transmem'];
+            let itemArray = ['cdd', 'clinvar', 'snp', 'site', 'ptm', 'ssbond', 'crosslink', 'transmem', 'domain', 'interaction'];
             for(let i in itemArray) {
                 let item = itemArray[i];
                 if(bShow) {
@@ -40885,7 +41779,8 @@ var icn3d = (function (exports) {
             }
         }
         setAnnoTabBase(bChecked) {  let ic = this.icn3d; ic.icn3dui;
-            let itemArray = ['all', 'binding', 'snp', 'clinvar', 'cdd', '3dd', 'interact', 'custom', 'ssbond', 'crosslink', 'transmem'];
+            //let itemArray = ['all', 'binding', 'ptm', 'snp', 'clinvar', 'cdd', '3dd', 'interact', 'custom', 'ssbond', 'crosslink', 'transmem'];
+            let itemArray = ['all', 'cdd', 'clinvar', 'snp', 'binding', 'ptm', 'ssbond', 'crosslink', 'transmem', '3dd', 'custom', 'interact'];
             for(let i in itemArray) {
                 let item = itemArray[i];
                 if($("#" + ic.pre + "anno_" + item).length) $("#" + ic.pre + "anno_" + item)[0].checked = bChecked;
@@ -40897,10 +41792,11 @@ var icn3d = (function (exports) {
             this.updateClinvar();
             this.updateSnp();
             this.updateDomain();
-            this.updateInteraction();
+            this.updatePTM();
             this.updateSsbond();
             this.updateCrosslink();
             this.updateTransmem();
+            this.updateInteraction();
         }
         hideAnnoTabAll() {  let ic = this.icn3d; ic.icn3dui;
             this.setAnnoTabBase(false);
@@ -40952,6 +41848,11 @@ var icn3d = (function (exports) {
                 $("[id^=" + ic.pre + "interaction]").show();
                 ic.bInteractionShown = false;
                 this.updateInteraction();
+            }
+            if($("#" + ic.pre + "anno_ptm").length && $("#" + ic.pre + "anno_ptm")[0].checked) {
+                $("[id^=" + ic.pre + "ptm]").show();
+                ic.bPTMShown = false;
+                this.updatePTM();
             }
             if($("#" + ic.pre + "anno_custom").length && $("#" + ic.pre + "anno_custom")[0].checked) {
                 $("[id^=" + ic.pre + "custom]").show();
@@ -41033,6 +41934,15 @@ var icn3d = (function (exports) {
         hideAnnoTabInteraction() {  let ic = this.icn3d; ic.icn3dui;
             $("[id^=" + ic.pre + "interaction]").hide();
             if($("#" + ic.pre + "anno_interact").length) $("#" + ic.pre + "anno_interact")[0].checked = false;
+        }
+        setAnnoTabPTM() {  let ic = this.icn3d; ic.icn3dui;
+            $("[id^=" + ic.pre + "ptm]").show();
+            if($("#" + ic.pre + "anno_ptm").length) $("#" + ic.pre + "anno_ptm")[0].checked = true;
+            this.updatePTM();
+        }
+        hideAnnoTabPTM() {  let ic = this.icn3d; ic.icn3dui;
+            $("[id^=" + ic.pre + "ptm]").hide();
+            if($("#" + ic.pre + "anno_ptm").length) $("#" + ic.pre + "anno_ptm")[0].checked = false;
         }
         setAnnoTabSsbond() {  let ic = this.icn3d; ic.icn3dui;
             $("[id^=" + ic.pre + "ssbond]").show();
@@ -41145,6 +42055,17 @@ var icn3d = (function (exports) {
             }
             });
 
+            me.myEventCls.onIds("#" + ic.pre + "anno_ptm", "click", function(e) {
+                if($("#" + ic.pre + "anno_ptm")[0].checked) {
+                    thisClass.setAnnoTabPTM();
+                    me.htmlCls.clickMenuCls.setLogCmd("set annotation ptm", true);
+                }
+                else {
+                    thisClass.hideAnnoTabPTM();
+                    me.htmlCls.clickMenuCls.setLogCmd("hide annotation ptm", true);
+                }
+            });
+
             //$("#" + ic.pre + "anno_custom", "click", function(e) {
             me.myEventCls.onIds("#" + ic.pre + "anno_custom", "click", function(e) {
             if($("#" + ic.pre + "anno_custom")[0].checked) {
@@ -41240,7 +42161,7 @@ var icn3d = (function (exports) {
             }
         }
         setAnnoDisplay(display, prefix) { let ic = this.icn3d; ic.icn3dui;
-            let itemArray = ['giseq', 'custom', 'site', 'snp', 'clinvar', 'cdd', 'domain', 'interaction', 'ssbond', 'crosslink', 'transmem'];
+            let itemArray = ['giseq', 'custom', 'site', 'ptm', 'snp', 'clinvar', 'cdd', 'domain', 'interaction', 'ssbond', 'crosslink', 'transmem'];
             for(let i in itemArray) {
                 let item = itemArray[i];
                 $("[id^=" + ic.pre + prefix + "_" + item + "]").attr('style', display);
@@ -41310,6 +42231,15 @@ var icn3d = (function (exports) {
                 }
             }
             ic.bInteractionShown = true;
+        }
+        updatePTM() { let ic = this.icn3d; ic.icn3dui;
+            if(ic.bPTMShown === undefined || !ic.bPTMShown) {
+                for(let chainid in ic.PTMChainbase) {
+                    let chainidBase = ic.PTMChainbase[chainid];
+                    ic.annoPTMCls.showPTM(chainid, chainidBase);
+                }
+            }
+            ic.bPTMShown = true;
         }
         updateSsbond() { let ic = this.icn3d; ic.icn3dui;
             if(ic.bSSbondShown === undefined || !ic.bSSbondShown) {
@@ -42471,7 +43401,7 @@ var icn3d = (function (exports) {
         updateHlObjects(bForceHighlight) { let ic = this.icn3d; ic.icn3dui;
            ic.hlObjectsCls.removeHlObjects();
 
-           if((ic.hAtoms && Object.keys(ic.hAtoms).length < Object.keys(ic.atoms).length) || bForceHighlight) {
+           if((ic.hAtoms && ic.atoms && Object.keys(ic.hAtoms).length < Object.keys(ic.atoms).length) || bForceHighlight) {
               ic.hlObjectsCls.addHlObjects();
               ic.definedSetsCls.setMode('selection');
            }
@@ -42486,7 +43416,7 @@ var icn3d = (function (exports) {
 
                if(residueHash === undefined) residueHash = ic.firstAtomObjCls.getResiduesFromCalphaAtoms(ic.hAtoms);
 
-               if(ic.hAtoms && Object.keys(ic.hAtoms).length < Object.keys(ic.atoms).length) this.hlSequence(Object.keys(residueHash));
+               if(ic.hAtoms && ic.atoms && Object.keys(ic.hAtoms).length < Object.keys(ic.atoms).length) this.hlSequence(Object.keys(residueHash));
                this.changeSeqColor(Object.keys(residueHash));
         }
 
@@ -42496,7 +43426,7 @@ var icn3d = (function (exports) {
                }
                //if(residueHash === undefined) residueHash = ic.firstAtomObjCls.getResiduesFromCalphaAtoms(ic.hAtoms);
 
-               if(ic.hAtoms && Object.keys(ic.hAtoms).length == Object.keys(ic.atoms).length) return;
+               if(ic.hAtoms && ic.atoms && Object.keys(ic.hAtoms).length == Object.keys(ic.atoms).length) return;
 
                //this.hlSequence(Object.keys(residueHash));
                // speed up with chain highlight
@@ -42537,7 +43467,7 @@ var icn3d = (function (exports) {
         updateHl2D(chainArray2d) { let ic = this.icn3d, me = ic.icn3dui;
           this.removeHl2D();
 
-          if(ic.hAtoms && Object.keys(ic.hAtoms).length == Object.keys(ic.atoms).length) return;
+          if(ic.hAtoms && ic.atoms && Object.keys(ic.hAtoms).length == Object.keys(ic.atoms).length) return;
 
           if(chainArray2d === undefined) {
               let chainHash = ic.firstAtomObjCls.getChainsFromAtoms(ic.hAtoms);
@@ -42798,8 +43728,9 @@ var icn3d = (function (exports) {
 
             ic.definedSetsCls.setMode('all');
 
-            let  title =(ic.molTitle.length > 40) ? ic.molTitle.substr(0, 40) + "..." : ic.molTitle;
-            $("#" + ic.pre + "title").html(title);
+            //let  title =(ic.molTitle.length > 40) ? ic.molTitle.substr(0, 40) + "..." : ic.molTitle;
+            //$("#" + ic.pre + "title").html(title);
+            ic.saveFileCls.showTitle();
         }
 
         selectAll_base() { let  ic = this.icn3d, me = ic.icn3dui;
@@ -43044,9 +43975,12 @@ var icn3d = (function (exports) {
 
         //Show the selection.
         showSelection() { let  ic = this.icn3d, me = ic.icn3dui;
-            ic.dAtoms = {};
+            //ic.dAtoms = {};
 
-            if(Object.keys(ic.hAtoms).length == 0) this.selectAll_base();
+            if(Object.keys(ic.hAtoms).length == 0) {
+                //this.selectAll_base();
+                ic.hAtoms = me.hashUtilsCls.cloneHash(ic.dAtoms);
+            }
 
             ic.dAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
             ic.viewSelectionAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
@@ -43687,11 +44621,14 @@ var icn3d = (function (exports) {
                 console.log("WebGL context was lost. Reset WebGLRenderer and launch iCn3D again.");
 
                 ic.renderer = new THREE.WebGLRenderer({
-                    canvas: ic.container.get(0),
-                    antialias: true,
-                    preserveDrawingBuffer: true,
-                    alpha: true
+                  canvas: ic.oriContainer.get(0), //this.container.get(0),
+                  antialias: true,
+                  preserveDrawingBuffer: true,
+                  sortObjects: false,
+                  alpha: true
                 });
+                // Enable VR
+                ic.renderer.xr.enabled = true;
 
                 ic.drawCls.draw();
 
@@ -44900,7 +45837,8 @@ var icn3d = (function (exports) {
                     }
                     else { // bSymd, subset, and one chain
                         if(Object.keys(ic.hAtoms).length == 0) {
-                            ic.hAtoms = me.hashUtilsCls.cloneHash(ic.atoms);
+                            //ic.hAtoms = me.hashUtilsCls.cloneHash(ic.atoms);
+                            ic.hAtoms = me.hashUtilsCls.cloneHash(ic.dAtoms);
                         }
 
                         // pick the first 1/order of selection
@@ -52875,7 +53813,8 @@ var icn3d = (function (exports) {
                     ic.instancingCls.drawSymmetryMates();
                 }
                 else {
-                    ic.applyCenterCls.centerSelection();
+                    let bNoOrientation = true;
+                    ic.applyCenterCls.centerSelection(undefined, bNoOrientation);
                 }
             }
 
@@ -52899,6 +53838,15 @@ var icn3d = (function (exports) {
             }
 
             ic.impostorCls.clearImpostors();
+
+            // show membranes
+            if(ic.bOpm) {
+                if(window.dialog) window.dialog.dialog( "close" );
+                
+                let html = "<br><span style='color:red'>Red</span> and <span style='color:blue'>blue</span> membranes indicate <span style='color:red'>extracellular</span> and <span style='color:blue'>intracellular</span> membranes, respectively.<br><br>";
+                $("#" + ic.pre + "dl_rmsd").html(html);
+                if(!me.cfg.bSidebyside) me.htmlCls.dialogCls.openDlg('dl_rmsd', 'Membranes');
+            }
         }
 
         //Update the rotation, translation, and zooming before rendering. Typically used before the function render().
@@ -53043,8 +53991,6 @@ var icn3d = (function (exports) {
                         inputSource.targetRayMode;
                         //info.push({ gamepad, handedness, profiles, targetRayMode });
                     });
-                        
-                    //console.log( JSON.stringify(info) );
                      
                     ic.getInputSources = false;
                 }else if (ic.useStandard && ic.gamepadType != ""){
@@ -53676,7 +54622,7 @@ var icn3d = (function (exports) {
         }
 
         //getAtomPDB: function(atomHash, bPqr, bPdb, bNoChem) { let ic = this.icn3d, me = ic.icn3dui;
-        getAtomPDB(atomHash, bPqr, bNoChem, bNoHeader, chainResi2pdb) { let ic = this.icn3d, me = ic.icn3dui;
+        getAtomPDB(atomHash, bPqr, bNoChem, bNoHeader, chainResi2pdb, pdbid) { let ic = this.icn3d, me = ic.icn3dui;
             let pdbStr = '';
 
             // get all phosphate groups in lipids
@@ -53715,40 +54661,49 @@ var icn3d = (function (exports) {
                 stru2header[stru] = '';
             }
 
-            for(let i in calphaHash) {
-                let atom = ic.atoms[i];
-                let stru = atom.structure;
+    //        if(!bNoSs) {
+                let prevResi, stru;
+                for(let i in calphaHash) {
+                    let atom = ic.atoms[i];
+                    stru = atom.structure;
 
-                if(atom.ssbegin) {
-                    if(atom.ss == 'helix') {
-                        bHelixBegin = true;
-                        if(bHelixEnd) stru2header[stru] += helixStr.padEnd(15, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                            + atom.resi.toString().padStart(5, ' ');
-                        bHelixEnd = false;
+                    if(atom.ssbegin) {
+                        if(atom.ss == 'helix') {
+                            bHelixBegin = true;
+                            if(bHelixEnd) stru2header[stru] += helixStr.padEnd(15, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                                + atom.resi.toString().padStart(5, ' ');
+                            bHelixEnd = false;
+                            prevResi = atom.resi;
+                        }
+                        else if(atom.ss == 'sheet') {
+                            bSheetBegin = true;
+                            if(bSheetEnd) stru2header[stru] += sheetStr.padEnd(17, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                                + atom.resi.toString().padStart(4, ' ');
+                            bSheetEnd = false;
+                        }
                     }
-                    else if(atom.ss == 'sheet') {
-                        bSheetBegin = true;
-                        if(bSheetEnd) stru2header[stru] += sheetStr.padEnd(17, ' ') + atom.resn.padStart(3, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                            + atom.resi.toString().padStart(4, ' ');
-                        bSheetEnd = false;
+
+                    if(atom.ssend) {
+                        if(atom.ss == 'helix') {
+                            bHelixEnd = true;
+                            let helixLen = parseInt(atom.resi) - parseInt(prevResi);
+                            let helixType = 1;
+                            if(bHelixBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                                + atom.resi.toString().padStart(5, ' ') + '  ' + helixType + helixLen.toString().padStart(36, ' ') + '\n';
+                            bHelixBegin = false;
+                        }
+                        else if(atom.ss == 'sheet') {
+                            bSheetEnd = true;
+                            let sense = 0;
+                            if(bSheetBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
+                                + atom.resi.toString().padStart(4, ' ') + '  ' + sense + '\n';
+                            bSheetBegin = false;
+                        }
                     }
                 }
-
-                if(atom.ssend) {
-                    if(atom.ss == 'helix') {
-                        bHelixEnd = true;
-                        if(bHelixBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                            + atom.resi.toString().padStart(5, ' ') + '\n';
-                        bHelixBegin = false;
-                    }
-                    else if(atom.ss == 'sheet') {
-                        bSheetEnd = true;
-                        if(bSheetBegin) stru2header[stru] += atom.resn.padStart(5, ' ') + atom.chain.replace(/_/gi, '').substr(0, 2).padStart(2, ' ')
-                            + atom.resi.toString().padStart(4, ' ') + '\n';
-                        bSheetBegin = false;
-                    }
-                }
-            }
+                // add a new line in case the structure is a subset
+                stru2header[stru] += '\n';
+    //        }
 
             // export assembly symmetry matrix "BIOMT"
             if(ic.biomtMatrices) {
@@ -53765,40 +54720,6 @@ var icn3d = (function (exports) {
                     }
                 }
             }
-
-     /*
-            // get missing residues
-            let ic.chainMissingResidueArray = {};
-            for(let chainid in ic.chainsSeq) {
-                let pos = chainid.indexOf('_');
-                let chain = chainid.substr(0, pos);
-
-                for(let i = 0, il = ic.chainsSeq[chainid].length; i < il; ++i) {
-                    let resi = ic.chainsSeq[chainid][i].resi;
-                    let resid = chainid + '_' + resi;
-                    if(!ic.firstAtomObjCls.getFirstAtomObj(ic.residues[resid])) { // mising coordinate
-                        if(ic.chainMissingResidueArray[chainid] === undefined) ic.chainMissingResidueArray[chainid] = [];
-                        let seq = me.utilsCls.residueAbbr2Name(ic.chainsSeq[chainid][i].name);
-                        let resiObj = {'resi': resi, 'seq': seq};
-                        ic.chainMissingResidueArray[chainid].push(resiObj);
-                    }
-                }
-            }
-
-            // add missing residues "REMARK 465..."
-            for(let chainid in ic.chainMissingResidueArray) {
-                let pos = chainid.indexOf('_');
-                let chain = chainid.substr(pos + 1, 2);
-                let stru = chainid.substr(0, pos);
-
-                for(let i = 0, il = ic.chainMissingResidueArray[chainid].length; i < il; ++i) {
-                    let resi = ic.chainMissingResidueArray[chainid][i].resi;
-                    let seq = ic.chainMissingResidueArray[chainid][i].seq;
-
-                    stru2header[stru] += "REMARK 465     " + seq.padStart(3, " ") + chain.padStart(2, " ") + " " + resi.toString().padStart(5, " ") + "\n";
-                }
-            }
-    */
 
             // add missing residues "REMARK 465..."
             for(let chainid in ic.chainMissingResidueArray) {
@@ -53825,15 +54746,6 @@ var icn3d = (function (exports) {
             for(let i in atomHash) {
                 let atom = ic.atoms[i];
 
-                let chainResi = atom.chain + '_' + atom.resi;
-                if(chainResi2pdb && chainResi2pdb.hasOwnProperty(chainResi)) {
-                    if(!addedChainResiHash.hasOwnProperty(chainResi)) {
-                        pdbStr += chainResi2pdb[chainResi];
-                        addedChainResiHash[chainResi] = 1;
-                    }
-                    continue;
-                }
-
                 // remove chemicals
                 if(bNoChem && atom.het) continue;
 
@@ -53848,10 +54760,19 @@ var icn3d = (function (exports) {
 
                     // add header            
                     let mutantInfo = (chainResi2pdb) ? "Mutated chain_residue " + Object.keys(chainResi2pdb) + '; ' : '';
-                    if(!bNoHeader) pdbStr += this.getPDBHeader(molNum - 1, stru2header, mutantInfo);
+                    if(!bNoHeader) pdbStr += this.getPDBHeader(molNum - 1, stru2header, mutantInfo, pdbid);
 
                     prevStru = atom.structure;
                     ++molNum;
+                }
+
+                let chainResi = atom.chain + '_' + atom.resi;
+                if(chainResi2pdb && chainResi2pdb.hasOwnProperty(chainResi)) {
+                    if(!addedChainResiHash.hasOwnProperty(chainResi)) {
+                        pdbStr += chainResi2pdb[chainResi];
+                        addedChainResiHash[chainResi] = 1;
+                    }
+                    continue;
                 }
 
                 let line = '';
@@ -53931,7 +54852,8 @@ var icn3d = (function (exports) {
                 line += atom.coord.z.toFixed(3).toString().padStart(8, ' ');
 
                 //if((bPqr && atom.het) ||(phosPHash.hasOwnProperty(i) && !bPdb) ||(phosOHash.hasOwnProperty(i) && !bPdb) ) {
-                if((bPqr && atom.het) ||(phosPHash.hasOwnProperty(i)) ||(phosOHash.hasOwnProperty(i)) ) {
+                //if((bPqr && atom.het) ||(phosPHash.hasOwnProperty(i)) ||(phosOHash.hasOwnProperty(i)) ) {
+                if(bPqr && atom.het) {
                     let size = 1.5, charge = 0;
 
         /*
@@ -54076,11 +54998,11 @@ var icn3d = (function (exports) {
 
            return pdbStr;
         }
-        getPDBHeader(struNum, stru2header, mutantInfo) { let ic = this.icn3d; ic.icn3dui;
+        getPDBHeader(struNum, stru2header, mutantInfo, pdbid) { let ic = this.icn3d; ic.icn3dui;
            if(struNum === undefined) struNum = 0;
 
            let pdbStr = '';
-           let stru = Object.keys(ic.structures)[struNum];
+           let stru = (pdbid) ? pdbid : Object.keys(ic.structures)[struNum];
            let id = (mutantInfo) ? stru + '2' : stru;
            pdbStr += 'HEADER    PDB From iCn3D'.padEnd(62, ' ') + id + '\n';
 
@@ -54119,6 +55041,8 @@ var icn3d = (function (exports) {
                     $("#" + ic.pre + "title").html("PubChem CID <a id='" + ic.pre + "titlelink' href='" + url + "' style='color:" + titlelinkColor + "' target='_blank'>" + ic.inputid.toUpperCase() + "</a>: " + title);
                 }
                 else if(me.cfg.align !== undefined) {
+                    title = 'VAST+ alignment of ' + Object.keys(ic.structures);
+
                     $("#" + ic.pre + "title").html(title);
                 }
                 else if(me.cfg.chainalign !== undefined) {
@@ -54129,26 +55053,34 @@ var icn3d = (function (exports) {
                 }
                 else if(me.cfg.mmdbafid !== undefined) {
                     let structureArray = me.cfg.mmdbafid.split(',');
-                    title = 'Multiple structures: ' + structureArray;
-
-                    $("#" + ic.pre + "title").html(title);
+                    if(structureArray.length > 1) {
+                        title = 'Multiple structures: ' + structureArray;
+                        $("#" + ic.pre + "title").html(title);
+                    }
+                    else if(structureArray.length == 1) {
+                        let url = this.getLinkToStructureSummary();
+                        this.setStructureTitle(url, title, titlelinkColor);
+                    }
                 }
                 else {
                     let url = this.getLinkToStructureSummary();
-
-                    if(ic.molTitle.length > 40) title = ic.molTitle.substr(0, 40) + "...";
-
-                    //var asymmetricStr =(ic.bAssemblyUseAsu) ? "(Asymmetric Unit)" : "";
-                    let asymmetricStr = "";
-
-                    let idName = (me.cfg.afid) ? "AlphaFold UniProt ID" : "PDB ID";
-
-                    $("#" + ic.pre + "title").html(idName + " <a id='" + ic.pre + "titlelink' href='" + url + "' style='color:" + titlelinkColor + "' target='_blank'>" + ic.inputid.toUpperCase() + "</a>" + asymmetricStr + ": " + title);
+                    this.setStructureTitle(url, title, titlelinkColor);
                 }
             }
             else {
                 $("#" + ic.pre + "title").html("");
             }
+        }
+
+        setStructureTitle(url, title, titlelinkColor) {var ic = this.icn3d; ic.icn3dui;
+            if(ic.molTitle.length > 40) title = ic.molTitle.substr(0, 40) + "...";
+
+            //var asymmetricStr =(ic.bAssemblyUseAsu) ? "(Asymmetric Unit)" : "";
+            let asymmetricStr = "";
+
+            let idName = (isNaN(ic.inputid) && ic.inputid.length > 5) ? "AlphaFold ID" : "PDB ID";
+
+            $("#" + ic.pre + "title").html(idName + " <a id='" + ic.pre + "titlelink' href='" + url + "' style='color:" + titlelinkColor + "' target='_blank'>" + ic.inputid.toUpperCase() + "</a>" + asymmetricStr + ": " + title);
         }
 
         getLinkToStructureSummary(bLog) {var ic = this.icn3d, me = ic.icn3dui;
@@ -54277,6 +55209,99 @@ var icn3d = (function (exports) {
             $("#" + me.pre + id2).resizable();
         }
 
+        applyShownMenus() { let me = this.icn3dui; me.icn3d;
+            let idArray = [];
+            for(let id in me.htmlCls.allMenus) {
+                if(me.htmlCls.shownMenus.hasOwnProperty(id)) {
+                    $("#" + me.pre + id).parent().show();
+                }
+                else {            
+                    $("#" + me.pre + id).parent().hide();     
+                    idArray.push(id);         
+                }
+            }   
+
+            if(Object.keys(me.htmlCls.shownMenus).length == Object.keys(me.htmlCls.allMenus).length) {
+                $(".icn3d-menusep").show();
+            }
+            else {
+                $(".icn3d-menusep").hide();
+            }
+
+            // save to localStorage
+            if(localStorage) localStorage.setItem('hiddenmenus', JSON.stringify(idArray));
+        }
+
+        getHiddenMenusFromCache() { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.shownMenus = {};
+
+            let idArrayStr = (localStorage) ? localStorage.getItem('hiddenmenus') : '';
+            
+            if(idArrayStr && idArrayStr != '[]') {
+                let idArray = JSON.parse(idArrayStr);
+
+                // for(let i = 0, il = idArray.length; i < il; ++i) {
+                //     me.htmlCls.shownMenus[idArray[i]] = 1;
+                // }
+                for(let menu in me.htmlCls.allMenus) {
+                    if(idArray.indexOf(menu) == -1) {
+                        me.htmlCls.shownMenus[menu] = 1;
+                    }
+                }
+            }
+            else {
+                me.htmlCls.shownMenus = me.hashUtilsCls.cloneHash(me.htmlCls.allMenus);
+            }
+        }
+        
+        displayShownMenus() { let me = this.icn3dui; me.icn3d;
+            let html = "<form name='" + me.pre + "selmenu'>";
+            html += "<table><tr><th>File</th><th>Select</th><th>View</th><th>Style</th><th>Color</th><th>Analysis</th><th>Help</th></tr>";
+            html += "<tr>";
+            for(let id in me.htmlCls.allMenusSel) {
+                // skip all unicolor: too many
+                if(id.substr(0, 6) == 'uniclr' 
+                    || id.substr(0, 11) == 'mn5_opacity'
+                    || id.substr(0, 14) == 'mn6_labelscale'
+                    || id.substr(0, 4) == 'faq_'
+                    || id.substr(0, 4) == 'dev_') {
+                        continue;
+                }
+
+                if(id == 'mn1_searchstru') {
+                    html += "<td valign='top'>";
+                }
+                else if(id == 'mn2_definedsets') {
+                    html += "</td><td valign='top'>";
+                }
+                else if(id == 'mn2_show_selected') {
+                    html += "</td><td valign='top'>";
+                }
+                else if(id == 'mn3_proteinwrap' || (me.cfg.cid && id == 'mn3_ligwrap')) {
+                    html += "</td><td valign='top'>";
+                }
+                else if(id == 'mn4_clrwrap') {
+                    html += "</td><td valign='top'>";
+                }
+                else if(id == 'mn6_selectannotations') {
+                    html += "</td><td valign='top'>";
+                }
+                else if(id == 'abouticn3d') {
+                    html += "</td><td valign='top'>";
+                }
+
+                let checkStr = (me.htmlCls.shownMenus.hasOwnProperty(id)) ? "checked" : "";
+
+                let selType = me.htmlCls.allMenusSel[id];
+                let styleStr = (selType == 3) ? " style='margin-left:30px'" : ((selType == 2) ? " style='margin-left:15px'" : "");
+
+                html += "<span style='white-space:nowrap'><input type='checkbox' name='" + id + "' value='" + id + "'" + checkStr + styleStr + ">" + me.htmlCls.allMenus[id] + "</span><br>";
+            }  
+            html += "</td></tr></table></form>";
+
+            $("#" + me.pre + "menulist").html(html);
+        }
+
 
         clickMenu1() { let me = this.icn3dui; me.icn3d;
             if(me.bNode) return;
@@ -54284,104 +55309,104 @@ var icn3d = (function (exports) {
             let thisClass = this;
         //mn 1
         //    clkMn1_mmtfid: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_vastplus", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_vastplus", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_vastplus', 'Please input PDB ID for VAST+');
              });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_vast", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_vast", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_vast', 'Please input chain or PDB file for VAST');
              });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_foldseek", "click", function(e) { me.icn3d;
-                me.htmlCls.dialogCls.openDlg('dl_foldseek', 'Please input AlphaFold Uniprot ID or PDB ID');
+            me.myEventCls.onIds("#" + me.pre + "mn1_foldseek", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.dialogCls.openDlg('dl_foldseek', 'Submit your selection to Foldseek');
              });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_mmtfid", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_mmtfid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_mmtfid', 'Please input MMTF ID');
             });
         //    },
         //    clkMn1_pdbid: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_pdbid", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_pdbid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_pdbid', 'Please input PDB ID');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_afid", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_afid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_afid', 'Please input AlphaFold UniProt ID');
             });
 
         //    },
         //    clkMn1_opmid: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_opmid", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_opmid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_opmid', 'Please input OPM PDB ID');
             });
         //    },
         //    clkMn1_align: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_align", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_align", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_align', 'Align two PDB structures');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_alignaf", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_alignaf", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_alignaf', 'Align two AlphaFold structures');
              });
         //    },
         //    clkMn1_chainalign: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_chainalign", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_chainalign", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_chainalign', 'Align multiple chains by structure alignment');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_chainalign2", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_chainalign2", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_chainalign2', 'Align multiple chains by sequence alignment');
              });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_chainalign3", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_chainalign3", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_chainalign3', 'Align multiple chains residue by residue');
              });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_mutation", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_mutation", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_mutation', 'Show the mutations in 3D');
             });
 
         //    },
         //    clkMn1_pdbfile: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_pdbfile", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_pdbfile", "click", function(e) { me.icn3d; e.preventDefault();
                //me = me.setIcn3dui($(this).attr('id'));
                me.htmlCls.dialogCls.openDlg('dl_pdbfile', 'Please input PDB File');
             });
-            me.myEventCls.onIds(["#" + me.pre + "mn1_pdbfile_app", "#" + me.pre + "tool_pdbfile"], "click", function(e) { me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn1_pdbfile_app", "#" + me.pre + "tool_pdbfile"], "click", function(e) { me.icn3d; e.preventDefault();
                //me = me.setIcn3dui($(this).attr('id'));
                me.htmlCls.dialogCls.openDlg('dl_pdbfile_app', 'Please append PDB Files');
             });
         //    },
         //    clkMn1_mol2file: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_mol2file", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_mol2file", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_mol2file', 'Please input Mol2 File');
             });
         //    },
         //    clkMn1_sdffile: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_sdffile", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_sdffile", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_sdffile', 'Please input SDF File');
             });
         //    },
         //    clkMn1_xyzfile: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_xyzfile", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_xyzfile", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_xyzfile', 'Please input XYZ File');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_afmapfile", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_afmapfile", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_afmapfile', 'Please input AlphaFold PAE File');
              });
         //    },
         //    clkMn1_urlfile: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_urlfile", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_urlfile", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_urlfile', 'Load data by URL');
             });
 
         //    },
         //    clkMn1_fixedversion: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_fixedversion", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_fixedversion", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_fixedversion', 'Open Share Link URL in the archived version of iCn3D');
             });
-            me.myEventCls.onIds("#" + me.pre + "reload_fixedversion", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "reload_fixedversion", "click", function(e) { me.icn3d; e.preventDefault();
                let url = $("#" + me.pre + "sharelinkurl").val();
                thisClass.setLogCmd("open " + url, false);
                localStorage.setItem('fixedversion', '1');
@@ -54389,78 +55414,82 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn1_mmciffile: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_mmciffile", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_mmciffile", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_mmciffile', 'Please input mmCIF File');
             });
         //    },
         //    clkMn1_mmcifid: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_mmcifid", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_mmcifid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_mmcifid', 'Please input mmCIF ID');
             });
         //    },
         //    clkMn1_mmdbid: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn1_mmdbid", "#" + me.pre + "tool_mmdbid"], "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_mmdbid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_mmdbid', 'Please input MMDB or PDB ID');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_mmdbafid", "click", function(e) { me.icn3d;
-                me.htmlCls.dialogCls.openDlg('dl_mmdbafid', 'Please input MMDB, PDB, or AlphaFold UniProt IDs');
+            me.myEventCls.onIds(["#" + me.pre + "mn1_mmdbafid", , "#" + me.pre + "tool_mmdbafid"], "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.dialogCls.openDlg('dl_mmdbafid', 'Please input PDB/MMDB/AlphaFold UniProt IDs');
             });
         //    },
         //    clkMn1_blast_rep_id: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_blast_rep_id", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_blast_rep_id", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_blast_rep_id', 'Align sequence to structure');
             });
         //    },
         //    clkMn1_gi: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_gi", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_gi", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_gi', 'Please input protein gi');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_uniprotid", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_refseq", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.dialogCls.openDlg('dl_grefseq', 'Please input protein RefSeq');
+             });
+
+            me.myEventCls.onIds("#" + me.pre + "mn1_uniprotid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_uniprotid', 'Please input UniProt ID');
             });
         //    },
         //    clkMn1_cid: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_cid", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_cid", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_cid', 'Please input PubChem CID');
             });
         //    },
         //    clkMn1_pngimage: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_pngimage", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_pngimage", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_pngimage', 'Please input the PNG image');
             });
         //    },
         //    clkMn1_state: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_state", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_state", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_state', 'Please input the state file');
             });
         //    },
         //    clkMn1_selection: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_selection", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_selection", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_selection', 'Please input the selection file');
             });
         //    },
         //    clkMn1_dsn6: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_dsn6", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_dsn6", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_dsn6', 'Please input the DSN6 file to display electron density map');
             });
         //    },
 
-            me.myEventCls.onIds(["#" + me.pre + "mn1_delphi", "#" + me.pre + "mn1_delphi2", "#" + me.pre + "tool_delphi"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn1_delphi", "#" + me.pre + "mn1_delphi2", "#" + me.pre + "tool_delphi"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.loadPhiFrom = 'delphi';
                $("#" + me.pre + "dl_delphi_tabs").tabs();
                me.htmlCls.dialogCls.openDlg('dl_delphi', 'Please set parameters to display DelPhi potential map');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_phi", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_phi", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.loadPhiFrom = 'phi';
                $("#" + me.pre + "dl_phi_tabs").tabs();
                $("#" + me.pre + "phitab1_tabs").tabs();
                $("#" + me.pre + "phitab2_tabs").tabs();
                me.htmlCls.dialogCls.openDlg('dl_phi', 'Please input local phi or cube file to display DelPhi potential map');
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_phiurl", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_phiurl", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.loadPhiFrom = 'phiurl';
                $("#" + me.pre + "dl_phiurl_tabs").tabs();
                $("#" + me.pre + "phiurltab1_tabs").tabs();
@@ -54469,12 +55498,12 @@ var icn3d = (function (exports) {
             });
 
         //    clkMn1_dsn6url: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_dsn6url", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_dsn6url", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_dsn6url', 'Please input the DSN6 file to display electron density map');
             });
         //    },
         //    clkMn1_exportState: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportState", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportState", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export state file", false);
                let file_pref =(ic.inputid) ? ic.inputid : "custom";
 
@@ -54482,19 +55511,19 @@ var icn3d = (function (exports) {
             });
         //    },
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportPdbRes", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportPdbRes", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.setHtmlCls.exportPdb();
 
                thisClass.setLogCmd("export pdb", true);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportSecondary", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportSecondary", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.setHtmlCls.exportSecondary();
 
                thisClass.setLogCmd("export secondary structure", true);
             });
 
-            me.myEventCls.onIds(["#" + me.pre + "delphipdb", "#" + me.pre + "phipdb"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "delphipdb", "#" + me.pre + "phipdb"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let pdbStr = ic.saveFileCls.getSelectedResiduePDB();
 
                thisClass.setLogCmd("export PDB of selected residues", false);
@@ -54502,7 +55531,7 @@ var icn3d = (function (exports) {
                ic.saveFileCls.saveFile(file_pref + '_icn3d_residues.pdb', 'text', [pdbStr]);
             });
         /*
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportPdbChain", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportPdbChain", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let  pdbStr = me.getSelectedChainPDB();
 
                thisClass.setLogCmd("export PDB of selected chains", false);
@@ -54510,33 +55539,33 @@ var icn3d = (function (exports) {
                ic.saveFileCls.saveFile(file_pref + '_icn3d_chains.pdb', 'text', [pdbStr]);
             });
         */
-            me.myEventCls.onIds(["#" + me.pre + "delphipqr", "#" + me.pre + "phipqr", "#" + me.pre + "phiurlpqr"], "click", function(e) { me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "delphipqr", "#" + me.pre + "phipqr", "#" + me.pre + "phiurlpqr"], "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.setHtmlCls.exportPqr();
                thisClass.setLogCmd("export pqr", true);
             });
 
-            me.myEventCls.onIds(["#" + me.pre + "delphipdbh", "#" + me.pre + "phipqr", "#" + me.pre + "phiurlpqr"], "click", function(e) { me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "delphipdbh", "#" + me.pre + "phipqr", "#" + me.pre + "phiurlpqr"], "click", function(e) { me.icn3d; e.preventDefault();
                 let bPdb = true;
                 me.htmlCls.setHtmlCls.exportPqr(bPdb);
                 thisClass.setLogCmd("export pdbh", false);
              });
 
         //    clkMn1_exportStl: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportStl", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportStl", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export stl file", false);
                //ic.threeDPrintCls.hideStabilizer();
                ic.export3DCls.exportStlFile('');
             });
         //    },
         //    clkMn1_exportVrml: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportVrml", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportVrml", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export vrml file", false);
                //ic.threeDPrintCls.hideStabilizer();
                ic.export3DCls.exportVrmlFile('');
             });
         //    },
         //    clkMn1_exportStlStab: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportStlStab", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportStlStab", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export stl stabilizer file", false);
                //ic.bRender = false;
                ic.threeDPrintCls.hideStabilizer();
@@ -54546,7 +55575,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn1_exportVrmlStab: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportVrmlStab", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportVrmlStab", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export vrml stabilizer file", false);
                //ic.bRender = false;
                ic.threeDPrintCls.hideStabilizer();
@@ -54556,14 +55585,14 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_exportInteraction: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_exportInteraction", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_exportInteraction", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export interactions", false);
                if(me.cfg.mmdbid !== undefined) ic.viewInterPairsCls.retrieveInteractionData();
                ic.viewInterPairsCls.exportInteractions();
             });
         //    },
         //    clkMn1_exportCanvas: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn1_exportCanvas", "#" + me.pre + "saveimage"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn1_exportCanvas", "#" + me.pre + "saveimage"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                // do not record the export command
                //thisClass.setLogCmd("export canvas", true);
                thisClass.setLogCmd("export canvas", false);
@@ -54572,29 +55601,29 @@ var icn3d = (function (exports) {
                let bPngHtml = true;
                ic.shareLinkCls.shareLink(bPngHtml);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas1", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas1", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export canvas 1", true);
                ic.scaleFactor = 1;
                ic.shareLinkCls.shareLink(true, true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas2", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas2", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export canvas 2", true);
                ic.scaleFactor = 2;
                ic.shareLinkCls.shareLink(true, true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas4", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas4", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export canvas 4", true);
                ic.scaleFactor = 4;
                ic.shareLinkCls.shareLink(true, true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas8", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportCanvas8", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export canvas 8", true);
                ic.scaleFactor = 8;
                ic.shareLinkCls.shareLink(true, true);
             });
         //    },
         //    clkMn1_exportCounts: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportCounts", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportCounts", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export counts", false);
                let text = '<html><body><div style="text-align:center"><br><b>Total Count for atoms with coordinates</b>:<br/><table align=center border=1 cellpadding=10 cellspacing=0><tr><th>Structure Count</th><th>Chain Count</th><th>Residue Count</th><th>Atom Count</th></tr>';
                text += '<tr><td>' + Object.keys(ic.structures).length + '</td><td>' + Object.keys(ic.chains).length + '</td><td>' + Object.keys(ic.residues).length + '</td><td>' + Object.keys(ic.atoms).length + '</td></tr>';
@@ -54622,7 +55651,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn1_exportSelections: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportSelections", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportSelections", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export all selections", false);
               
                thisClass.SetChainsAdvancedMenu();
@@ -54632,7 +55661,7 @@ var icn3d = (function (exports) {
                ic.saveFileCls.saveFile(file_pref + '_selections.txt', 'text', [text]);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn1_exportSelDetails", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_exportSelDetails", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("export all selections with details", false);
               
                thisClass.SetChainsAdvancedMenu();
@@ -54645,35 +55674,132 @@ var icn3d = (function (exports) {
 
         //    },
         //    clkMn1_sharelink: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn1_sharelink", "#" + me.pre + "tool_sharelink"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn1_sharelink", "#" + me.pre + "tool_sharelink"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.shareLinkCls.shareLink();
             });
         //    },
         //    clkMn1_replay: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_replayon", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_replayon", "click", function(e) { let ic = me.icn3d; e.preventDefault();
               ic.resizeCanvasCls.replayon();
               thisClass.setLogCmd("replay on", true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_replayoff", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_replayoff", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.resizeCanvasCls.replayoff();
                 thisClass.setLogCmd("replay off", true);
             });
+
+            me.myEventCls.onIds("#" + me.pre + "mn1_menuall", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.shownMenus = me.hashUtilsCls.cloneHash(me.htmlCls.allMenus);
+
+                thisClass.applyShownMenus();    
+              });
+
+            me.myEventCls.onIds("#" + me.pre + "mn1_menusimple", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.shownMenus = me.hashUtilsCls.cloneHash(me.htmlCls.simpleMenus);
+
+                thisClass.applyShownMenus();
+              });
+
+            me.myEventCls.onIds("#" + me.pre + "mn1_menupref", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.dialogCls.openDlg('dl_menupref', 'Select Menus');
+
+                thisClass.getHiddenMenusFromCache();
+
+                thisClass.displayShownMenus();
+             });
+
+             me.myEventCls.onIds("#" + me.pre + "apply_menupref", "click", function(e) { me.icn3d; e.preventDefault();
+                var checkboxes = document.querySelectorAll('form[name="' + me.pre + 'selmenu"] input:checked');
+                me.htmlCls.shownMenus = {};
+                for (var checkbox of checkboxes) {
+                    me.htmlCls.shownMenus[checkbox.value] = 1;
+                }
+
+                thisClass.applyShownMenus();
+             });
+
+             me.myEventCls.onIds("#" + me.pre + "reset_menupref", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.shownMenus = me.hashUtilsCls.cloneHash(me.htmlCls.simpleMenus);
+
+                thisClass.applyShownMenus();
+                thisClass.displayShownMenus();
+             });
+
+             me.myEventCls.onIds("#" + me.pre + "reset_menupref_all", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.shownMenus = me.hashUtilsCls.cloneHash(me.htmlCls.allMenus);
+
+                thisClass.applyShownMenus();
+                thisClass.displayShownMenus();
+             });
+
+             me.myEventCls.onIds("#" + me.pre + "savepref", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+                let menuStr = '[';
+
+                var checkboxes = document.querySelectorAll('form[name="' + me.pre + 'selmenu"] input:checked');
+                let cnt = 0;
+                for (var checkbox of checkboxes) {
+                    if(cnt > 0) menuStr += ', ';
+                    menuStr += '"' + checkbox.value + '"';
+                    ++cnt;
+                }
+                
+                menuStr += ']';
+        
+                ic.saveFileCls.saveFile('icn3d_shown_menus.txt', 'text', [menuStr]);
+             });
+
+             me.myEventCls.onIds("#" + me.pre + "reload_menupreffile", "click", function(e) { me.icn3d; e.preventDefault();
+                //e.preventDefault();
+                if(!me.cfg.notebook) dialog.dialog( "close" );
+                let file = $("#" + me.pre + "menupreffile")[0].files[0];
+                if(!file) {
+                  alert("Please select a file before clicking 'Load'");
+                }
+                else {
+                  me.htmlCls.setHtmlCls.fileSupport();
+                  let reader = new FileReader();
+                  reader.onload = function(e) {
+                    let dataStr = e.target.result; // or = reader.result;
+                    let idArray = JSON.parse(dataStr);
+
+                    me.htmlCls.shownMenus = {};
+                    // for(let i = 0, il = idArray.length; i < il; ++i) {
+                    //     me.htmlCls.shownMenus[idArray[i]] = 1;
+                    // }
+                    for(let menu in me.htmlCls.allMenus) {
+                        if(idArray.indexOf(menu) == -1) {
+                            me.htmlCls.shownMenus[menu] = 1;
+                        }
+                    }
+
+                    thisClass.applyShownMenus();
+                    thisClass.displayShownMenus();
+                  };
+                  reader.readAsText(file);
+                }
+             });
+
+            me.myEventCls.onIds("#" + me.pre + "mn1_menuloadpref", "click", function(e) { me.icn3d; e.preventDefault();
+                me.htmlCls.dialogCls.openDlg('dl_menuloadpref', 'Please input the menu preference file');
+            });
+             
+
         //    },
         //    clkMn1_link_structure: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_link_structure", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_link_structure", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let url = ic.saveFileCls.getLinkToStructureSummary(true);
                window.open(url, '_blank');
             });
         //    },
         //    clkMn1_link_bind: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_link_bind", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_link_bind", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                url = "https://www.ncbi.nlm.nih.gov/pccompound?LinkName=pccompound_structure&from_uid=" + ic.inputid;
                thisClass.setLogCmd("link to 3D protein structures bound to CID " + ic.inputid + ": " + url, false);
                window.open(url, '_blank');
             });
         //    },
         //    clkMn1_link_vast: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_link_vast", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_link_vast", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                if(ic.inputid === undefined) {
                        url = "https://www.ncbi.nlm.nih.gov/pccompound?term=" + ic.molTitle;
                        thisClass.setLogCmd("link to compounds " + ic.molTitle + ": " + url, false);
@@ -54701,7 +55827,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn1_link_pubmed: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_link_pubmed", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_link_pubmed", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                if(ic.inputid === undefined) {
                    let url;
                    url = "https://www.ncbi.nlm.nih.gov/pubmed/?term=" + ic.molTitle;
@@ -54745,7 +55871,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn1_link_protein: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_link_protein", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_link_protein", "click", function(e) { let ic = me.icn3d; e.preventDefault();
               //ic.saveFileCls.setEntrezLinks('protein');
               let structArray = Object.keys(ic.structures);
               let chainArray = Object.keys(ic.chains);
@@ -54770,20 +55896,20 @@ var icn3d = (function (exports) {
             let thisClass = this;
         // mn 2
         //    clkMn2_selectannotations: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn6_selectannotations", "#" + me.pre + "tool_selectannotations"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_selectannotations", "#" + me.pre + "tool_selectannotations"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.showAnnoCls.showAnnotations();
                thisClass.setLogCmd("view annotations", true);
                //thisClass.setLogCmd("window annotations", true);
             });
         //    },
         //    clkMn2_selectall: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_selectall", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_selectall", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select all", true);
                ic.selectionCls.selectAll();
                ic.hlUpdateCls.removeHlAll();
                ic.drawCls.draw();
             });
-            me.myEventCls.onIds("#" + me.pre + "clearall", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "clearall", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("clear all", true);
                ic.bSelectResidue = false;
                ic.selectionCls.selectAll();
@@ -54792,7 +55918,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_selectdisplayed: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_selectdisplayed", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_selectdisplayed", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select displayed set", true);
                //ic.hAtoms = me.hashUtilsCls.cloneHash(ic.dAtoms);
                ic.hAtoms = me.hashUtilsCls.cloneHash(ic.viewSelectionAtoms);
@@ -54801,13 +55927,13 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_fullstru: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_fullstru", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_fullstru", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("show all", true);
                ic.selectionCls.showAll();
             });
         //    },
         //    clkMn2_selectcomplement: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_selectcomplement", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_selectcomplement", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                if(Object.keys(ic.hAtoms).length < Object.keys(ic.atoms).length) {
                    thisClass.setLogCmd("select complement", true);
                    ic.resid2specCls.selectComplement();
@@ -54815,53 +55941,53 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_selectmainchains: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_selectmainchains", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_selectmainchains", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select main chains", true);
                ic.selectionCls.selectMainChains();
             });
         //    },
         //    clkMn2_selectsidechains: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_selectsidechains", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_selectsidechains", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select side chains", true);
                ic.selectionCls.selectSideChains();
             });
         //    },
         //    clkMn2_selectmainsidechains: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_selectmainsidechains", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_selectmainsidechains", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select main side chains", true);
                ic.selectionCls.selectMainSideChains();
             });
         //    },
         //    clkMn2_propperty: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_propPos", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_propPos", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select prop positive", true);
                ic.resid2specCls.selectProperty('positive');
             });
-            me.myEventCls.onIds("#" + me.pre + "mn2_propNeg", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_propNeg", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select prop negative", true);
                ic.resid2specCls.selectProperty('negative');
             });
-            me.myEventCls.onIds("#" + me.pre + "mn2_propHydro", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_propHydro", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select prop hydrophobic", true);
                ic.resid2specCls.selectProperty('hydrophobic');
             });
-            me.myEventCls.onIds("#" + me.pre + "mn2_propPolar", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_propPolar", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                thisClass.setLogCmd("select prop polar", true);
                ic.resid2specCls.selectProperty('polar');
             });
-            me.myEventCls.onIds("#" + me.pre + "mn2_propBfactor", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_propBfactor", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_propbybfactor', 'Select residue based on B-factor');
             });
-            me.myEventCls.onIds("#" + me.pre + "mn2_propSolAcc", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_propSolAcc", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_propbypercentout', 'Select residue based on the percentage of solvent accessilbe surface area');
             });
-            me.myEventCls.onIds("#" + me.pre + "applypropbybfactor", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "applypropbybfactor", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let from = $("#" + me.pre + "minbfactor").val();
                let to = $("#" + me.pre + "maxbfactor").val();
                thisClass.setLogCmd("select prop b factor | " + from + '_' + to, true);
                ic.resid2specCls.selectProperty('b factor', from, to);
             });
-            me.myEventCls.onIds("#" + me.pre + "applypropbypercentout", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "applypropbypercentout", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let from = $("#" + me.pre + "minpercentout").val();
                let to = $("#" + me.pre + "maxpercentout").val();
                thisClass.setLogCmd("select prop percent out | " + from + '_' + to, true);
@@ -54869,36 +55995,36 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_alignment: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_alignment", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_alignment", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_alignment', 'Select residues in aligned sequences');
                thisClass.setLogCmd("window aligned sequences", true);
             });
         //    },
         //    clkMn2_windows: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_window_table", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_window_table", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_allinteraction', 'Show interactions');
                thisClass.setLogCmd("window interaction table", true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_window_linegraph", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_window_linegraph", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_linegraph', 'Show interactions between two lines of residue nodes');
                thisClass.setLogCmd("window interaction graph", true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_window_scatterplot", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_window_scatterplot", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_scatterplot', 'Show interactions as map');
                thisClass.setLogCmd("window interaction scatterplot", true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn1_window_graph", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_window_graph", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_graph', 'Force-directed graph');
                thisClass.setLogCmd("window force-directed graph", true);
             });
         //    },
         //    clkMn6_yournote: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_yournote", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_yournote", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_yournote', 'Your note about the current display');
             });
         //    },
         //    clkApplyYournote: function() {
-            me.myEventCls.onIds("#" + me.pre + "applyyournote", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "applyyournote", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.yournote = $("#" + me.pre + "yournote").val();
                if(me.cfg.shownote) document.title = ic.yournote;
                if(!me.cfg.notebook) dialog.dialog( "close" );
@@ -54906,28 +56032,28 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_command: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_command", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_command", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_advanced2', 'Select by specification');
             });
         //    },
         //    clkMn2_definedsets: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn2_definedsets", "#" + me.pre + "definedsets", "#" + me.pre + "definedsets2", "#" + me.pre + "tool_definedsets"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn2_definedsets", "#" + me.pre + "definedsets", "#" + me.pre + "definedsets2", "#" + me.pre + "tool_definedsets"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.definedSetsCls.showSets();
                thisClass.setLogCmd('defined sets', true);
                //thisClass.setLogCmd('window defined sets', true);
             });
-            me.myEventCls.onIds("#" + me.pre + "setOr", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "setOr", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOperation = 'or';
             });
-            me.myEventCls.onIds("#" + me.pre + "setAnd", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "setAnd", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOperation = 'and';
             });
-            me.myEventCls.onIds("#" + me.pre + "setNot", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "setNot", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOperation = 'not';
             });
         //    },
         //    clkMn2_pkNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_pkNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_pkNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pk = 0;
                ic.opts['pk'] = 'no';
                thisClass.setLogCmd('set pk off', true);
@@ -54936,58 +56062,58 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_pkYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_pkYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_pkYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pk = 1;
                ic.opts['pk'] = 'atom';
                thisClass.setLogCmd('set pk atom', true);
             });
         //    },
         //    clkMn2_pkResidue: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_pkResidue", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_pkResidue", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pk = 2;
                ic.opts['pk'] = 'residue';
                thisClass.setLogCmd('set pk residue', true);
             });
         //    },
         //    clkMn2_pkStrand: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_pkStrand", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_pkStrand", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pk = 3;
                ic.opts['pk'] = 'strand';
                thisClass.setLogCmd('set pk strand', true);
             });
         //    },
         //    clkMn2_pkDomain: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_pkDomain", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_pkDomain", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pk = 4;
                ic.opts['pk'] = 'domain';
                thisClass.setLogCmd('set pk domain', true);
             });
         //    },
         //    clkMn2_pkChain: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_pkChain", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_pkChain", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pk = 5;
                ic.opts['pk'] = 'chain';
                thisClass.setLogCmd('set pk chain', true);
             });
         //    },
         //    clk_adjustmem: function() {
-            me.myEventCls.onIds("#" + me.pre + "adjustmem", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "adjustmem", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_adjustmem', 'Adjust the Z-axis positions of the membrane');
             });
         //    },
         //    clk_togglemem: function() {
-            me.myEventCls.onIds("#" + me.pre + "togglemem", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "togglemem", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.selectionCls.toggleMembrane();
                thisClass.setLogCmd('toggle membrane', true);
             });
         //    },
         //    clk_selectplane: function() {
-            me.myEventCls.onIds("#" + me.pre + "selectplane", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "selectplane", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_selectplane', 'Select a region between two planes');
             });
         //    },
         //    clkMn2_aroundsphere: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn2_aroundsphere", "#" + me.pre + "tool_aroundsphere"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn2_aroundsphere", "#" + me.pre + "tool_aroundsphere"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 thisClass.SetChainsAdvancedMenu();
 
                 let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
@@ -55005,7 +56131,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_select_chain: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn2_select_chain", "#" + me.pre + "definedSets"], "click", function(e) { me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn2_select_chain", "#" + me.pre + "definedSets"], "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_select_chain', 'Select Structure/Chain/Custom Selection');
             });
         //    },
@@ -55017,229 +56143,229 @@ var icn3d = (function (exports) {
             let thisClass = this;
         // mn 3
         //    clkMn3_proteinsRibbon: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn3_proteinsRibbon","#" + me.pre + "tool_proteinsRibbon"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn3_proteinsRibbon","#" + me.pre + "tool_proteinsRibbon"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'ribbon');
                thisClass.setLogCmd('style proteins ribbon', true);
             });
         //    },
         //    clkMn3_proteinsStrand: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsStrand", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsStrand", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'strand');
                thisClass.setLogCmd('style proteins strand', true);
             });
         //    },
         //    clkMn3_proteinsCylinder: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsCylinder", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsCylinder", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'cylinder and plate');
                thisClass.setLogCmd('style proteins cylinder and plate', true);
             });
         //    },
         //    clkMn3_proteinsSchematic: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsSchematic", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsSchematic", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'schematic');
                thisClass.setLogCmd('style proteins schematic', true);
             });
         //    },
         //    clkMn3_proteinsCalpha: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsCalpha", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsCalpha", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'c alpha trace');
                thisClass.setLogCmd('style proteins c alpha trace', true);
             });
         //    },
         //    clkMn3_proteinsBackbone: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsBackbone", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsBackbone", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'backbone');
                thisClass.setLogCmd('style proteins backbone', true);
             });
         //    },
         //    clkMn3_proteinsBfactor: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsBfactor", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsBfactor", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'b factor tube');
                thisClass.setLogCmd('style proteins b factor tube', true);
             });
         //    },
         //    clkMn3_proteinsLines: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsLines", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsLines", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'lines');
                thisClass.setLogCmd('style proteins lines', true);
             });
         //    },
         //    clkMn3_proteinsStick: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsStick", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsStick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'stick');
                thisClass.setLogCmd('style proteins stick', true);
             });
         //    },
         //    clkMn3_proteinsBallstick: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn3_proteinsBallstick", "#" + me.pre + "tool_proteinsBallstick"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn3_proteinsBallstick", "#" + me.pre + "tool_proteinsBallstick"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'ball and stick');
                thisClass.setLogCmd('style proteins ball and stick', true);
             });
         //    },
         //    clkMn3_proteinsSphere: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn3_proteinsSphere", "#" + me.pre + "tool_proteinsSphere"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn3_proteinsSphere", "#" + me.pre + "tool_proteinsSphere"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'sphere');
                thisClass.setLogCmd('style proteins sphere', true);
             });
         //    },
         //    clkMn3_proteinsNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_proteinsNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('proteins', 'nothing');
                thisClass.setLogCmd('style proteins nothing', true);
             });
         //    },
         //    clkMn3_sidecLines: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_sidecLines", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_sidecLines", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('sidec', 'lines2');
                thisClass.setLogCmd('style sidec lines2', true);
             });
         //    },
         //    clkMn3_sidecStick: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_sidecStick", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_sidecStick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('sidec', 'stick2');
                thisClass.setLogCmd('style sidec stick2', true);
             });
         //    },
         //    clkMn3_sidecBallstick: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_sidecBallstick", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_sidecBallstick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('sidec', 'ball and stick2');
                thisClass.setLogCmd('style sidec ball and stick2', true);
             });
         //    },
         //    clkMn3_sidecSphere: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_sidecSphere", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_sidecSphere", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('sidec', 'sphere2');
                thisClass.setLogCmd('style sidec sphere2', true);
             });
         //    },
         //    clkMn3_sidecNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_sidecNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_sidecNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('sidec', 'nothing');
                thisClass.setLogCmd('style sidec nothing', true);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseLines", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseLines", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.setOptionCls.setStyle('ntbase', 'lines2');
                 thisClass.setLogCmd('style ntbase lines2', true);
              });
      
-             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseStick", "click", function(e) { let ic = me.icn3d;
+             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseStick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.setOptionCls.setStyle('ntbase', 'stick2');
                 thisClass.setLogCmd('style ntbase stick2', true);
              });
      
-             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseBallstick", "click", function(e) { let ic = me.icn3d;
+             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseBallstick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.setOptionCls.setStyle('ntbase', 'ball and stick2');
                 thisClass.setLogCmd('style ntbase ball and stick2', true);
              });
      
-             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseSphere", "click", function(e) { let ic = me.icn3d;
+             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseSphere", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.setOptionCls.setStyle('ntbase', 'sphere2');
                 thisClass.setLogCmd('style ntbase sphere2', true);
              });
      
-             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseNo", "click", function(e) { let ic = me.icn3d;
+             me.myEventCls.onIds("#" + me.pre + "mn3_ntbaseNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.setOptionCls.setStyle('ntbase', 'nothing');
                 thisClass.setLogCmd('style ntbase nothing', true);
              });
         //    },
         //    clkMn3_nuclCartoon: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclCartoon", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclCartoon", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'nucleotide cartoon');
                thisClass.setLogCmd('style nucleotides nucleotide cartoon', true);
            });
         //    },
         //    clkMn3_nuclBackbone: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclBackbone", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclBackbone", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'backbone');
                thisClass.setLogCmd('style nucleotides backbone', true);
             });
         //    },
         //    clkMn3_nuclSchematic: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclSchematic", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclSchematic", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'schematic');
                thisClass.setLogCmd('style nucleotides schematic', true);
             });
         //    },
         //    clkMn3_nuclPhos: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclPhos", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclPhos", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'o3 trace');
                thisClass.setLogCmd('style nucleotides o3 trace', true);
             });
         //    },
         //    clkMn3_nuclLines: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclLines", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclLines", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'lines');
                thisClass.setLogCmd('style nucleotides lines', true);
             });
         //    },
         //    clkMn3_nuclStick: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclStick", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclStick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'stick');
                thisClass.setLogCmd('style nucleotides stick', true);
             });
         //    },
         //    clkMn3_nuclBallstick: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclBallstick", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclBallstick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'ball and stick');
                thisClass.setLogCmd('style nucleotides ball and stick', true);
             });
         //    },
         //    clkMn3_nuclSphere: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclSphere", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclSphere", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'sphere');
                thisClass.setLogCmd('style nucleotides sphere', true);
             });
         //    },
         //    clkMn3_nuclNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_nuclNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_nuclNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('nucleotides', 'nothing');
                thisClass.setLogCmd('style nucleotides nothing', true);
             });
         //    },
         //    clkMn3_ligLines: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ligLines", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ligLines", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('chemicals', 'lines');
                thisClass.setLogCmd('style chemicals lines', true);
             });
         //    },
         //    clkMn3_ligStick: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ligStick", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ligStick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('chemicals', 'stick');
                thisClass.setLogCmd('style chemicals stick', true);
             });
         //    },
         //    clkMn3_ligBallstick: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ligBallstick", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ligBallstick", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('chemicals', 'ball and stick');
                thisClass.setLogCmd('style chemicals ball and stick', true);
             });
         //    },
         //    clkMn3_ligSchematic: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ligSchematic", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ligSchematic", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('chemicals', 'schematic');
                thisClass.setLogCmd('style chemicals schematic', true);
             });
         //    },
         //    clkMn3_ligSphere: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ligSphere", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ligSphere", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('chemicals', 'sphere');
                thisClass.setLogCmd('style chemicals sphere', true);
             });
         //    },
         //    clkMn3_ligNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ligNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ligNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('chemicals', 'nothing');
                thisClass.setLogCmd('style chemicals nothing', true);
             });
         //    },
 
-            me.myEventCls.onIds("#" + me.pre + "mn3_glycansCartYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_glycansCartYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bGlycansCartoon = true;
                ic.drawCls.draw();
                thisClass.setLogCmd('glycans cartoon yes', true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn3_glycansCartNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_glycansCartNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bGlycansCartoon = false;
                ic.drawCls.draw();
                thisClass.setLogCmd('glycans cartoon no', true);
@@ -55247,51 +56373,51 @@ var icn3d = (function (exports) {
 
 
         //    clkMn3_hydrogensYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_hydrogensYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_hydrogensYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.showInterCls.showHydrogens();
                ic.drawCls.draw();
                thisClass.setLogCmd('hydrogens', true);
             });
         //    },
         //    clkMn3_hydrogensNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_hydrogensNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_hydrogensNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.showInterCls.hideHydrogens();
                ic.drawCls.draw();
                thisClass.setLogCmd('set hydrogens off', true);
             });
         //    },
         //    clkMn3_ionsSphere: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ionsSphere", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ionsSphere", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('ions', 'sphere');
                thisClass.setLogCmd('style ions sphere', true);
             });
         //    },
         //    clkMn3_ionsDot: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ionsDot", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ionsDot", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('ions', 'dot');
                thisClass.setLogCmd('style ions dot', true);
             });
         //    },
         //    clkMn3_ionsNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_ionsNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_ionsNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('ions', 'nothing');
                thisClass.setLogCmd('style ions nothing', true);
             });
         //    },
         //    clkMn3_waterSphere: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_waterSphere", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_waterSphere", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('water', 'sphere');
                thisClass.setLogCmd('style water sphere', true);
             });
         //    },
         //    clkMn3_waterDot: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_waterDot", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_waterDot", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('water', 'dot');
                thisClass.setLogCmd('style water dot', true);
             });
         //    },
         //    clkMn3_waterNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_waterNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_waterNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setStyle('water', 'nothing');
                thisClass.setLogCmd('style water nothing', true);
             });
@@ -55304,16 +56430,16 @@ var icn3d = (function (exports) {
             let thisClass = this;
         // mn 4
         //    clkMn4_clrSpectrum: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrSpectrum", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrSpectrum", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'spectrum');
                thisClass.setLogCmd('color spectrum', true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrSpectrumChain", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrSpectrumChain", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'spectrum for chains');
                thisClass.setLogCmd('color spectrum for chains', true);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrSpectrumSets", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrSpectrumSets", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
                     let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
                     ic.definedSetsCls.setPredefinedInMenu();
@@ -55329,7 +56455,7 @@ var icn3d = (function (exports) {
                  $("#" + me.pre + "atomsCustomColorSpectrum").resizable();
              });
 
-             me.myEventCls.onIds("#" + me.pre + "mn4_clrRainbowSets", "click", function(e) { let ic = me.icn3d;
+             me.myEventCls.onIds("#" + me.pre + "mn4_clrRainbowSets", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
                     let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
                     ic.definedSetsCls.setPredefinedInMenu();
@@ -55345,71 +56471,71 @@ var icn3d = (function (exports) {
                  $("#" + me.pre + "atomsCustomColorRainbow").resizable();
              });
 
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrRainbow", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrRainbow", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'rainbow');
                thisClass.setLogCmd('color rainbow', true);
             });
-            me.myEventCls.onIds(["#" + me.pre + "mn4_clrRainbowChain", "#" + me.pre + "tool_clrRainbowChain"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn4_clrRainbowChain", "#" + me.pre + "tool_clrRainbowChain"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'rainbow for chains');
                thisClass.setLogCmd('color rainbow for chains', true);
             });
         //    },
         //    clkMn4_clrChain: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn4_clrChain", "#" + me.pre + "tool_clrChain"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn4_clrChain", "#" + me.pre + "tool_clrChain"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'chain');
                thisClass.setLogCmd('color chain', true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrStructure", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrStructure", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.setOptionCls.setOption('color', 'structure');
                 thisClass.setLogCmd('color structure', true);
              });
         //    },
         //    clkMn4_clrDomain: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrdomain", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrdomain", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'domain');
                thisClass.setLogCmd('color domain', true);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrsets", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrsets", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'defined sets');
                thisClass.setLogCmd('color defined sets', true);
             });
 
         //    },
         //    clkMn4_clrSSGreen: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn4_clrSSGreen", "#" + me.pre + "tool_clrSSGreen"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn4_clrSSGreen", "#" + me.pre + "tool_clrSSGreen"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.sheetcolor = 'green';
                ic.setOptionCls.setOption('color', 'secondary structure green');
                thisClass.setLogCmd('color secondary structure green', true);
             });
         //    },
         //    clkMn4_clrSSYellow: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrSSYellow", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrSSYellow", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.sheetcolor = 'yellow';
                ic.setOptionCls.setOption('color', 'secondary structure yellow');
                thisClass.setLogCmd('color secondary structure yellow', true);
             });
         //    },
         //    clkMn4_clrSSSpectrum: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrSSSpectrum", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrSSSpectrum", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'secondary structure spectrum');
                thisClass.setLogCmd('color secondary structure spectrum', true);
             });
         //    },
         //    clkMn4_clrResidue: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrResidue", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrResidue", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'residue');
                thisClass.setLogCmd('color residue', true);
             });
         //    },
         //    clkMn4_clrResidueCustom: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrResidueCustom", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrResidueCustom", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_rescolorfile', 'Please input the file on residue colors');
             });
         //    },
         //    clkMn4_reloadRescolorfile: function() {
-            me.myEventCls.onIds("#" + me.pre + "reload_rescolorfile", "click", function(e) { let ic = me.icn3d;
-               e.preventDefault();
+            me.myEventCls.onIds("#" + me.pre + "reload_rescolorfile", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+               //e.preventDefault();
                if(!me.cfg.notebook) dialog.dialog( "close" );
                let file = $("#" + me.pre + "rescolorfile")[0].files[0];
                if(!file) {
@@ -55433,8 +56559,8 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn4_reloadCustomcolorfile: function() {
-            me.myEventCls.onIds("#" + me.pre + "reload_customcolorfile", "click", function(e) { let ic = me.icn3d;
-               e.preventDefault();
+            me.myEventCls.onIds("#" + me.pre + "reload_customcolorfile", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+               //e.preventDefault();
                if(!me.cfg.notebook) dialog.dialog( "close" );
                ic.startColor = $("#" + me.pre + "startColor").val();
                ic.midColor = $("#" + me.pre + "midColor").val();
@@ -55447,59 +56573,59 @@ var icn3d = (function (exports) {
 
                ic.addTrackCls.setCustomFile('color', ic.startColor, ic.midColor, ic.endColor);
             });
-            me.myEventCls.onIds("#" + me.pre + "remove_legend", "click", function(e) { me.icn3d;
-               e.preventDefault();
+            me.myEventCls.onIds("#" + me.pre + "remove_legend", "click", function(e) { me.icn3d; e.preventDefault();
+               //e.preventDefault();
                $("#" + me.pre + "legend").hide();
 
                thisClass.setLogCmd('remove legend', true);
             });
-            me.myEventCls.onIds("#" + me.pre + "reload_customtubefile", "click", function(e) { let ic = me.icn3d;
-               e.preventDefault();
+            me.myEventCls.onIds("#" + me.pre + "reload_customtubefile", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+               //e.preventDefault();
                if(!me.cfg.notebook) dialog.dialog( "close" );
                ic.addTrackCls.setCustomFile('tube');
             });
         //    },
         //    clkMn4_clrCharge: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrCharge", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrCharge", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'charge');
                thisClass.setLogCmd('color charge', true);
             });
         //    },
         //    clkMn4_clrHydrophobic: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrHydrophobic", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrHydrophobic", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'hydrophobic');
                thisClass.setLogCmd('color hydrophobic', true);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrNormalizedHP", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrNormalizedHP", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'normalized hydrophobic');
                thisClass.setLogCmd('color normalized hydrophobic', true);
             });
 
         //    },
         //    clkMn4_clrAtom: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn4_clrAtom", "#" + me.pre + "tool_clrAtom"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn4_clrAtom", "#" + me.pre + "tool_clrAtom"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'atom');
                thisClass.setLogCmd('color atom', true);
             });
         //    },
         //    clkMn4_clrBfactor: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrBfactor", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrBfactor", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'b factor');
                thisClass.setLogCmd('color b factor', true);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrConfidence", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrConfidence", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'confidence');
                thisClass.setLogCmd('color confidence', true);
             });
 
         //    },
         //    clkMn4_clrArea: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrArea", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrArea", "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_colorbyarea', "Color based on residue's solvent accessibility");
             });
-            me.myEventCls.onIds("#" + me.pre + "applycolorbyarea", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "applycolorbyarea", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.midpercent = $("#" + me.pre + 'midpercent').val();
                 ic.setOptionCls.setOption('color', 'area');
                 thisClass.setLogCmd('color area | ' + ic.midpercent, true);
@@ -55507,57 +56633,57 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn4_clrBfactorNorm: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrBfactorNorm", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrBfactorNorm", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'b factor percentile');
                thisClass.setLogCmd('color b factor percentile', true);
             });
         //    },
         //    clkMn4_clrIdentity: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrIdentity", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrIdentity", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'identity');
                thisClass.setLogCmd('color identity', true);
             });
         //    },
         //    clkMn4_clrConserved: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrConserved", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrConserved", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('color', 'conservation');
                thisClass.setLogCmd('color conservation', true);
             });
         //    },
         //    clkMn4_clrCustom: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrCustom", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrCustom", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_clr', 'Color picker');
             });
         //    },
         //    clkMn4_clrOther: function() {
-            $(document).on("click", ".icn3d-color-rad-text", function(e) { let ic = me.icn3d;
+            $(document).on("click", ".icn3d-color-rad-text", function(e) { let ic = me.icn3d; e.preventDefault();
               e.stopImmediatePropagation();
-              //e.preventDefault();
+              ////e.preventDefault();
               let color = $(this).attr('color');
               ic.setOptionCls.setOption("color", color);
               thisClass.setLogCmd("color " + color, true);
             });
         //    },
         //    clkMn4_clrSave: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrSave", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrSave", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.saveColor();
                thisClass.setLogCmd('save color', true);
             });
         //    },
         //    clkMn4_clrApplySave: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn4_clrApplySave", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn4_clrApplySave", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.applySavedColor();
                thisClass.setLogCmd('apply saved color', true);
             });
         //    },
         //    clkMn3_styleSave: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_styleSave", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_styleSave", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.saveStyle();
                thisClass.setLogCmd('save style', true);
             });
         //    },
         //    clkMn3_styleApplySave: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_styleApplySave", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn3_styleApplySave", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.applySavedStyle();
                thisClass.setLogCmd('apply saved style', true);
             });
@@ -55570,7 +56696,7 @@ var icn3d = (function (exports) {
             let thisClass = this;
         // mn 5
         //    clkMn5_neighborsYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_neighborsYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_neighborsYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = true;
                ic.applyMapCls.removeLastSurface();
                ic.applyMapCls.applySurfaceOptions();
@@ -55579,7 +56705,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn5_neighborsNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_neighborsNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_neighborsNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = false;
                ic.applyMapCls.removeLastSurface();
                ic.applyMapCls.applySurfaceOptions();
@@ -55588,49 +56714,49 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn5_surfaceVDW: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn5_surfaceVDW", "#" + me.pre + "tool_surfaceVDW"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn5_surfaceVDW", "#" + me.pre + "tool_surfaceVDW"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = false;
                ic.setOptionCls.setOption('surface', 'Van der Waals surface');
                thisClass.setLogCmd('set surface Van der Waals surface', true);
             });
         //    },
         //    clkMn5_surfaceSAS: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceSAS", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceSAS", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = false;
                ic.setOptionCls.setOption('surface', 'solvent accessible surface');
                thisClass.setLogCmd('set surface solvent accessible surface', true);
             });
         //    },
         //    clkMn5_surfaceMolecular: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceMolecular", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceMolecular", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = false;
                ic.setOptionCls.setOption('surface', 'molecular surface');
                thisClass.setLogCmd('set surface molecular surface', true);
             });
         //    },
         //    clkMn5_surfaceVDWContext: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceVDWContext", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceVDWContext", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = true;
                ic.setOptionCls.setOption('surface', 'Van der Waals surface with context');
                thisClass.setLogCmd('set surface Van der Waals surface with context', true);
             });
         //    },
         //    clkMn5_surfaceSASContext: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceSASContext", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceSASContext", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = true;
                ic.setOptionCls.setOption('surface', 'solvent accessible surface with context');
                thisClass.setLogCmd('set surface solvent accessible surface with context', true);
             });
         //    },
         //    clkMn5_surfaceMolecularContext: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceMolecularContext", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceMolecularContext", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bConsiderNeighbors = true;
                ic.setOptionCls.setOption('surface', 'molecular surface with context');
                thisClass.setLogCmd('set surface molecular surface with context', true);
             });
         //    },
         //    clkMn5_surfaceNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_surfaceNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('surface', 'nothing');
                thisClass.setLogCmd('set surface nothing', true);
             });
@@ -55640,14 +56766,14 @@ var icn3d = (function (exports) {
             $("." + me.pre + "mn5_opacity").each(function() {
                let value = $(this).attr('v');
 
-               $(this, "click", function(e) { let ic = me.icn3d;
+               $(this, "click", function(e) { let ic = me.icn3d; e.preventDefault();
                    ic.setOptionCls.setOption('opacity', value);
                    thisClass.setLogCmd('set surface opacity ' + value, true);
                });
             });
         */
 
-            $(document).on("click", "." + me.pre + "mn5_opacity", function(e) { let ic = me.icn3d;
+            $(document).on("click", "." + me.pre + "mn5_opacity", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.transparentRenderOrder = false;
 
                 let value = $(this).attr('v');
@@ -55655,7 +56781,7 @@ var icn3d = (function (exports) {
                thisClass.setLogCmd('set surface opacity ' + value, true);
             });
 
-            $(document).on("click", "." + me.pre + "mn5_opacityslow", function(e) { let ic = me.icn3d;
+            $(document).on("click", "." + me.pre + "mn5_opacityslow", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.transparentRenderOrder = true;
 
                 let value = $(this).attr('v');
@@ -55664,39 +56790,39 @@ var icn3d = (function (exports) {
              });
 
         //    clkMn5_wireframeYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_wireframeYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_wireframeYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('wireframe', 'yes');
                thisClass.setLogCmd('set surface wireframe on', true);
             });
         //    },
         //    clkMn5_wireframeNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_wireframeNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_wireframeNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('wireframe', 'no');
                thisClass.setLogCmd('set surface wireframe off', true);
             });
         //    },
         //    clkMn5_elecmap2fofc: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_elecmap2fofc", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_elecmap2fofc", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_elecmap2fofc', '2Fo-Fc Electron Density Map');
             });
         //    },
         //    clkMn5_elecmapfofc: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_elecmapfofc", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_elecmapfofc", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_elecmapfofc', 'Fo-Fc Electron Density Map');
             });
         //    },
         //    clkMn5_elecmapNo: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn5_elecmapNo", "#" + me.pre + "elecmapNo2", "#" + me.pre + "elecmapNo3", "#" + me.pre + "elecmapNo4", "#" + me.pre + "elecmapNo5"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn5_elecmapNo", "#" + me.pre + "elecmapNo2", "#" + me.pre + "elecmapNo3", "#" + me.pre + "elecmapNo4", "#" + me.pre + "elecmapNo5"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('map', 'nothing');
                thisClass.setLogCmd('setoption map nothing', true);
             });
         //    },
-            me.myEventCls.onIds(["#" + me.pre + "delphimapNo", "#" + me.pre + "phimapNo", "#" + me.pre + "phiurlmapNo", "#" + me.pre + "mn1_phimapNo"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "delphimapNo", "#" + me.pre + "phimapNo", "#" + me.pre + "phiurlmapNo", "#" + me.pre + "mn1_phimapNo"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('phimap', 'nothing');
                thisClass.setLogCmd('setoption phimap nothing', true);
             });
 
-            me.myEventCls.onIds(["#" + me.pre + "delphimapNo2", "#" + me.pre + "phimapNo2", "#" + me.pre + "phiurlmapNo2"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "delphimapNo2", "#" + me.pre + "phimapNo2", "#" + me.pre + "phiurlmapNo2"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //ic.setOptionCls.setOption('surface', 'nothing');
                //thisClass.setLogCmd('set surface nothing', true);
                ic.setOptionCls.setOption('phisurface', 'nothing');
@@ -55704,8 +56830,8 @@ var icn3d = (function (exports) {
             });
 
         //    clickApplymap2fofc: function() {
-            me.myEventCls.onIds("#" + me.pre + "applymap2fofc", "click", function(e) { let ic = me.icn3d;
-               e.preventDefault();
+            me.myEventCls.onIds("#" + me.pre + "applymap2fofc", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+               //e.preventDefault();
                //if(!me.cfg.notebook) dialog.dialog( "close" );
                let sigma2fofc = parseFloat($("#" + me.pre + "sigma2fofc" ).val());
                let type = '2fofc';
@@ -55715,8 +56841,8 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clickApplymapfofc: function() {
-            me.myEventCls.onIds("#" + me.pre + "applymapfofc", "click", function(e) { let ic = me.icn3d;
-               e.preventDefault();
+            me.myEventCls.onIds("#" + me.pre + "applymapfofc", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+               //e.preventDefault();
                //if(!me.cfg.notebook) dialog.dialog( "close" );
                let sigmafofc = parseFloat($("#" + me.pre + "sigmafofc" ).val());
                let type = 'fofc';
@@ -55726,32 +56852,32 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn5_mapwireframeYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_mapwireframeYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_mapwireframeYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //ic.dsn6ParserCls.dsn6Parser(ic.inputid);
                ic.setOptionCls.setOption('mapwireframe', 'yes');
                thisClass.setLogCmd('set map wireframe on', true);
             });
         //    },
         //    clkMn5_mapwireframeNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_mapwireframeNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_mapwireframeNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('mapwireframe', 'no');
                thisClass.setLogCmd('set map wireframe off', true);
             });
         //    },
         //    clkMn5_emmap: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_emmap", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_emmap", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_emmap', 'EM Density Map');
             });
         //    },
         //    clkMn5_emmapNo: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn5_emmapNo", "#" + me.pre + "emmapNo2"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn5_emmapNo", "#" + me.pre + "emmapNo2"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('emmap', 'nothing');
                thisClass.setLogCmd('setoption emmap nothing', true);
             });
         //    },
         //    clickApplyemmap: function() {
-            me.myEventCls.onIds("#" + me.pre + "applyemmap", "click", function(e) { let ic = me.icn3d;
-               e.preventDefault();
+            me.myEventCls.onIds("#" + me.pre + "applyemmap", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+               //e.preventDefault();
                //if(!me.cfg.notebook) dialog.dialog( "close" );
                let empercentage = parseFloat($("#" + me.pre + "empercentage" ).val());
                let type = 'em';
@@ -55762,14 +56888,14 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn5_emmapwireframeYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_emmapwireframeYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_emmapwireframeYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //ic.dsn6ParserCls.dsn6Parser(ic.inputid);
                ic.setOptionCls.setOption('emmapwireframe', 'yes');
                thisClass.setLogCmd('set emmap wireframe on', true);
             });
         //    },
         //    clkMn5_emmapwireframeNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn5_emmapwireframeNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn5_emmapwireframeNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('emmapwireframe', 'no');
                thisClass.setLogCmd('set emmap wireframe off', true);
             });
@@ -55782,28 +56908,39 @@ var icn3d = (function (exports) {
             let thisClass = this;
         // mn 6
         //    clkMn6_assemblyYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_assemblyYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_assemblyYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bAssembly = true;
                thisClass.setLogCmd('set assembly on', true);
                ic.drawCls.draw();
             });
         //    },
         //    clkMn6_assemblyNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_assemblyNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_assemblyNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bAssembly = false;
                thisClass.setLogCmd('set assembly off', true);
                ic.drawCls.draw();
             });
+
+            me.myEventCls.onIds("#" + me.pre + "mn6_igrefYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+                thisClass.setLogCmd('ig refnum on', true);
+                ic.refnumCls.showIgRefNum();
+             });
+
+             me.myEventCls.onIds("#" + me.pre + "mn6_igrefNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
+                thisClass.setLogCmd('ig refnum off', true);
+                ic.refnumCls.hideIgRefNum();
+             });
+
         //    },
         //    clkMn6_addlabelAtoms: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelAtoms", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelAtoms", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.residueLabelsCls.addAtomLabels(ic.hAtoms);
                ic.selectionCls.saveSelectionIfSelected();
                thisClass.setLogCmd('add atom labels', true);
                ic.drawCls.draw();
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelElements", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelElements", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.residueLabelsCls.addAtomLabels(ic.hAtoms, true);
                ic.selectionCls.saveSelectionIfSelected();
                thisClass.setLogCmd('add element labels', true);
@@ -55812,7 +56949,7 @@ var icn3d = (function (exports) {
 
         //    },
         //    clkMn6_addlabelResidues: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelResidues", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelResidues", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.residueLabelsCls.addResidueLabels(ic.hAtoms);
                ic.selectionCls.saveSelectionIfSelected();
                thisClass.setLogCmd('add residue labels', true);
@@ -55820,7 +56957,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_addlabelResnum: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelResnum", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelResnum", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.residueLabelsCls.addResidueLabels(ic.hAtoms, undefined, undefined, true);
                ic.selectionCls.saveSelectionIfSelected();
                thisClass.setLogCmd('add residue number labels', true);
@@ -55828,7 +56965,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_addlabelChains: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelChains", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelChains", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.analysisCls.addChainLabels(ic.hAtoms);
                ic.selectionCls.saveSelectionIfSelected();
                thisClass.setLogCmd('add chain labels', true);
@@ -55836,7 +56973,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_addlabelTermini: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelTermini", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelTermini", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.analysisCls.addTerminiLabels(ic.hAtoms);
                ic.selectionCls.saveSelectionIfSelected();
                thisClass.setLogCmd('add terminal labels', true);
@@ -55844,7 +56981,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_addlabelYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_addlabel', 'Add custom labels by selection');
                ic.pk = 1;
                ic.opts['pk'] = 'atom';
@@ -55853,21 +56990,21 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_addlabelSelection: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelSelection", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_addlabelSelection", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_addlabelselection', 'Add custom labels by the selected');
             });
 
-             me.myEventCls.onIds("#" + me.pre + "mn6_labelColor", "click", function(e) { me.icn3d;
+             me.myEventCls.onIds("#" + me.pre + "mn6_labelColor", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_labelColor', 'Change color for all labels');
             });
         //    },
         //    clkMn2_saveselection: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn2_saveselection","#" + me.pre + "tool_saveselection"], "click", function(e) { me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn2_saveselection","#" + me.pre + "tool_saveselection"], "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_saveselection', 'Save the selected');
             });
         //    },
         //    clkMn6_addlabelNo: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn6_addlabelNo", "#" + me.pre + "removeLabels"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_addlabelNo", "#" + me.pre + "removeLabels"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.labelcolor = undefined;
                 ic.pickpair = false;
                //ic.labels['residue'] = [];
@@ -55887,14 +57024,14 @@ var icn3d = (function (exports) {
             $("." + me.pre + "mn6_labelscale").each(function() {
                let value = $(this).attr('v');
 
-               $(this, "click", function(e) { let ic = me.icn3d;
+               $(this, "click", function(e) { let ic = me.icn3d; e.preventDefault();
                    ic.labelScale = value;
                    ic.drawCls.draw();
                    thisClass.setLogCmd('set label scale ' + value, true);
                });
             });
         */
-            $(document).on("click", "." + me.pre + "mn6_labelscale", function(e) { let ic = me.icn3d;
+            $(document).on("click", "." + me.pre + "mn6_labelscale", function(e) { let ic = me.icn3d; e.preventDefault();
                let value = $(this).attr('v');
                ic.labelScale = value;
                ic.drawCls.draw();
@@ -55902,7 +57039,7 @@ var icn3d = (function (exports) {
             });
 
         //    clkMn6_distanceYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_distanceYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_distanceYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_distance', 'Measure the distance of atoms');
                ic.pk = 1;
                ic.opts['pk'] = 'atom';
@@ -55912,7 +57049,7 @@ var icn3d = (function (exports) {
             });
         //    },
 
-            me.myEventCls.onIds("#" + me.pre + "mn6_distTwoSets", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_distTwoSets", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_disttwosets', 'Measure the distance between two sets');
 
                 thisClass.setSetsMenus();
@@ -55920,7 +57057,7 @@ var icn3d = (function (exports) {
                ic.bMeasureDistance = true;
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn6_distManySets", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_distManySets", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_distmanysets', 'Measure the pairwise distance among many sets');
 
                 thisClass.setSetsMenus(true);
@@ -55929,7 +57066,7 @@ var icn3d = (function (exports) {
             });
 
         //    clkMn6_distanceNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_distanceNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_distanceNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pickpair = false;
                let select = "set lines off";
                thisClass.setLogCmd(select, true);
@@ -55941,7 +57078,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn2_selectedcenter: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn2_selectedcenter", "#" + me.pre + "zoomin_selection", "#" + me.pre + "tool_selectedcenter"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn2_selectedcenter", "#" + me.pre + "zoomin_selection", "#" + me.pre + "tool_selectedcenter"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //thisClass.setLogCmd('zoom selection', true);
                ic.transformCls.zoominSelection();
                ic.drawCls.draw();
@@ -55949,7 +57086,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_center: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_center", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_center", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //thisClass.setLogCmd('center selection', true);
                ic.applyCenterCls.centerSelection();
                ic.drawCls.draw();
@@ -55957,7 +57094,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_resetOrientation: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn6_resetOrientation", "#" + me.pre + "resetOrientation", "#" + me.pre + "tool_resetOrientation"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_resetOrientation", "#" + me.pre + "resetOrientation", "#" + me.pre + "tool_resetOrientation"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //thisClass.setLogCmd('reset orientation', true);
                ic.transformCls.resetOrientation();
                //ic.setColorCls.applyOriginalColor();
@@ -55966,19 +57103,19 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_chemicalbindingshow: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn6_chemicalbindingshow", "#" + me.pre + "chemicalbindingshow"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_chemicalbindingshow", "#" + me.pre + "chemicalbindingshow"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('chemicalbinding', 'show');
                thisClass.setLogCmd('set chemicalbinding show', true);
             });
         //    },
         //    clkMn6_chemicalbindinghide: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn6_chemicalbindinghide", "#" + me.pre + "chemicalbindinghide"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_chemicalbindinghide", "#" + me.pre + "chemicalbindinghide"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('chemicalbinding', 'hide');
                thisClass.setLogCmd('set chemicalbinding hide', true);
             });
         //    },
         //    clkMn6_sidebyside: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_sidebyside", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_sidebyside", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                if(ic.bInputfile) {
                     alert("Side-by-Side does NOT work when the input is from a local file.");
                     return;
@@ -56000,7 +57137,7 @@ var icn3d = (function (exports) {
                let value = $(this).attr('v').toLowerCase();
                let direction = value.split(' ')[1];
 
-               $(this, "click", function(e) { let ic = me.icn3d;
+               $(this, "click", function(e) { let ic = me.icn3d; e.preventDefault();
                    thisClass.setLogCmd(value, true);
                    ic.bStopRotate = false;
                    ic.transformCls.rotateCount = 0;
@@ -56014,7 +57151,7 @@ var icn3d = (function (exports) {
                let value = $(this).attr('v').toLowerCase();
                let direction = value.split('-')[0];
 
-               $(this, "click", function(e) { let ic = me.icn3d;
+               $(this, "click", function(e) { let ic = me.icn3d; e.preventDefault();
                   thisClass.setLogCmd(value, true);
                   let axis;
                   if(direction == 'x') {
@@ -56032,7 +57169,7 @@ var icn3d = (function (exports) {
             });
         */
 
-            $(document).on("click", "." + me.pre + "mn6_rotate", function(e) { let ic = me.icn3d;
+            $(document).on("click", "." + me.pre + "mn6_rotate", function(e) { let ic = me.icn3d; e.preventDefault();
                let value = $(this).attr('v').toLowerCase();
                let direction = value.split(' ')[1];
 
@@ -56044,7 +57181,7 @@ var icn3d = (function (exports) {
                ic.resizeCanvasCls.rotStruc(direction);
             });
 
-            $(document).on("click", "." + me.pre + "mn6_rotate90", function(e) { let ic = me.icn3d;
+            $(document).on("click", "." + me.pre + "mn6_rotate90", function(e) { let ic = me.icn3d; e.preventDefault();
               let value = $(this).attr('v').toLowerCase();
               let direction = value.split('-')[0];
 
@@ -56064,23 +57201,23 @@ var icn3d = (function (exports) {
             });
 
         //    clkMn6_cameraPers: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_cameraPers", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_cameraPers", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('camera', 'perspective');
                thisClass.setLogCmd('set camera perspective', true);
             });
         //    },
         //    clkMn6_cameraOrth: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_cameraOrth", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_cameraOrth", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('camera', 'orthographic');
                thisClass.setLogCmd('set camera orthographic', true);
             });
         //    },
         //    clkMn6_bkgdBlack: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_bkgdBlack", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_bkgdBlack", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setStyleCls.setBackground('black');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "tool_bkgd", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "tool_bkgd", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 if(ic.opts['background'] == 'black') {
                     ic.setStyleCls.setBackground('white');
                 }
@@ -56092,22 +57229,22 @@ var icn3d = (function (exports) {
             ic.opts['background']; 
         //    },
         //    clkMn6_bkgdGrey: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_bkgdGrey", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_bkgdGrey", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setStyleCls.setBackground('grey');
             });
         //    },
         //    clkMn6_bkgdWhite: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn6_bkgdWhite", "#" + me.pre + "tool_bkgdWhite"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_bkgdWhite", "#" + me.pre + "tool_bkgdWhite"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setStyleCls.setBackground('white');
             });
         //    },
         //    clkMn6_bkgdTransparent: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_bkgdTransparent", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_bkgdTransparent", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setStyleCls.setBackground('transparent');
             });
         //    },
         //    clkMn6_showfogYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_showfogYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_showfogYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //ic.setOptionCls.setOption('fog', 'yes');
                ic.opts['fog'] = 'yes';
                ic.fogCls.setFog(true);
@@ -56116,7 +57253,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_showfogNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_showfogNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_showfogNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //ic.setOptionCls.setOption('fog', 'no');
                ic.opts['fog'] = 'no';
                ic.fogCls.setFog(true);
@@ -56125,24 +57262,24 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_showslabYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_showslabYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_showslabYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('slab', 'yes');
                thisClass.setLogCmd('set slab on', true);
             });
         //    },
         //    clkMn6_showslabNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_showslabNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_showslabNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('slab', 'no');
                thisClass.setLogCmd('set slab off', true);
             });
         //    },
         //    clkMn6_showaxisYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_showaxisYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_showaxisYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.setOptionCls.setOption('axis', 'yes');
                thisClass.setLogCmd('set axis on', true);
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn6_showaxisSel", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_showaxisSel", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pc1 = true;
 
                ic.axesCls.setPc1Axes();
@@ -56151,7 +57288,7 @@ var icn3d = (function (exports) {
 
         //    },
         //    clkMn6_showaxisNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_showaxisNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_showaxisNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.pc1 = false;
                ic.axes = [];
 
@@ -56161,13 +57298,13 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_symmetry: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_symmetry", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_symmetry", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bAxisOnly = false;
                ic.symdCls.retrieveSymmetry(Object.keys(ic.structures)[0]);
                //me.htmlCls.dialogCls.openDlg('dl_symmetry', 'Symmetry');
             });
 
-            me.myEventCls.onIds("#" + me.pre + "mn6_symd", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_symd", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bAxisOnly = false;
                ic.symdCls.retrieveSymd();
                ic.bSymd = true;
@@ -56177,12 +57314,12 @@ var icn3d = (function (exports) {
                //thisClass.setLogCmd('symd symmetry ' + title, true);
                thisClass.setLogCmd('symd symmetry', true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn6_clear_sym", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_clear_sym", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.symdArray = [];
                ic.drawCls.draw();
                thisClass.setLogCmd('clear symd symmetry', true);
             });
-            me.myEventCls.onIds("#" + me.pre + "mn6_axes_only", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_axes_only", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bAxisOnly = true;
                ic.drawCls.draw();
                thisClass.setLogCmd('show axis', true);
@@ -56190,13 +57327,13 @@ var icn3d = (function (exports) {
 
         //    },
         //    clkMn6_area: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_area", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_area", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 ic.analysisCls.calculateArea();
                 thisClass.setLogCmd('area', true);
             });
         //    },
         //    clkMn6_applysymmetry: function() {
-            me.myEventCls.onIds("#" + me.pre + "applysymmetry", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "applysymmetry", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.bAxisOnly = false;
 
                let title = $("#" + me.pre + "selectSymmetry" ).val();
@@ -56206,7 +57343,7 @@ var icn3d = (function (exports) {
                ic.drawCls.draw();
                thisClass.setLogCmd('symmetry ' + title, true);
             });
-            me.myEventCls.onIds("#" + me.pre + "clearsymmetry", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "clearsymmetry", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let title = 'none';
                ic.symmetrytitle = undefined;
                ic.drawCls.draw();
@@ -56214,13 +57351,13 @@ var icn3d = (function (exports) {
             });
 
         /*
-            me.myEventCls.onIds("#" + me.pre + "applysymd", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "applysymd", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let title = $("#" + me.pre + "selectSymd" ).val();
                ic.symdtitle =(title === 'none') ? undefined : title;
                ic.drawCls.draw();
                thisClass.setLogCmd('symd symmetry ' + title, true);
             });
-            me.myEventCls.onIds("#" + me.pre + "clearsymd", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "clearsymd", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let title = 'none';
                ic.symdtitle = undefined;
                ic.drawCls.draw();
@@ -56230,7 +57367,7 @@ var icn3d = (function (exports) {
 
         //    },
         //    clkMn6_hbondsYes: function() {
-            me.myEventCls.onIds(["#" + me.pre + "mn6_hbondsYes", "#" + me.pre + "hbondsYes"], "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_hbondsYes", "#" + me.pre + "hbondsYes"], "click", function(e) { let ic = me.icn3d; e.preventDefault();
                 thisClass.SetChainsAdvancedMenu();
 
                 let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
@@ -56247,19 +57384,19 @@ var icn3d = (function (exports) {
                $("#" + me.pre + "atomsCustomHbond2").resizable();
             });
 
-            me.myEventCls.onIds(["#" + me.pre + "mn6_contactmap"], "click", function(e) { me.icn3d;
+            me.myEventCls.onIds(["#" + me.pre + "mn6_contactmap"], "click", function(e) { me.icn3d; e.preventDefault();
                 me.htmlCls.dialogCls.openDlg('dl_contact', 'Set contact map');
             });
 
         //    },
         //    clkMn6_hbondsNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_hbondsNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_hbondsNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.showInterCls.hideHbondsContacts();
                ic.drawCls.draw();
             });
         //    },
         //    clkmn1_stabilizerYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                //me.htmlCls.dialogCls.openDlg('dl_stabilizer', 'Hydrogen bonds inside selection');
                let select = "stabilizer";
                ic.threeDPrintCls.addStabilizer();
@@ -56269,7 +57406,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkmn1_stabilizerNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let select = "set stabilizer off";
                thisClass.setLogCmd(select, true);
                ic.threeDPrintCls.hideStabilizer();
@@ -56277,7 +57414,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkmn1_stabilizerOne: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerOne", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerOne", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_stabilizer', 'Add One Stabilizer');
                ic.pk = 1;
                ic.opts['pk'] = 'atom';
@@ -56286,7 +57423,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkmn1_stabilizerRmOne: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerRmOne", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_stabilizerRmOne", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_stabilizer_rm', 'Remove One Stabilizer');
                ic.pk = 1;
                ic.opts['pk'] = 'atom';
@@ -56295,18 +57432,19 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkmn1_thicknessSet: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn1_thicknessSet", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_thicknessSet", "click", function(e) { me.icn3d; e.preventDefault();
                me.htmlCls.dialogCls.openDlg('dl_thickness', 'Set Thickness for 3D Printing');
             });
         //    },
         //    clkmn5_setThickness: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn3_setThickness", "click", function(e) { me.icn3d;
-               me.htmlCls.dialogCls.openDlg('dl_thickness2', 'Preferences');
+            me.myEventCls.onIds("#" + me.pre + "mn3_setThickness", "click", function(e) { me.icn3d; e.preventDefault();
+               me.htmlCls.dialogCls.openDlg('dl_thickness2', 'Style Preferences');
             });
+
         //    },
         //    clkmn1_thicknessReset: function() {
     /*
-            me.myEventCls.onIds("#" + me.pre + "mn1_thicknessReset", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn1_thicknessReset", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let select = "reset thickness";
                thisClass.setLogCmd(select, true);
                ic.bSetThickness = false;
@@ -56316,20 +57454,20 @@ var icn3d = (function (exports) {
     */
         //    },
         //    clkMn6_ssbondsYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_ssbondsYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_ssbondsYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let select = "disulfide bonds";
                thisClass.setLogCmd(select, true);
                ic.showInterCls.showSsbonds();
             });
         //    },
         //    clkMn6_ssbondsExport: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_ssbondsExport", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_ssbondsExport", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.viewInterPairsCls.exportSsbondPairs();
                thisClass.setLogCmd("export disulfide bond pairs", false);
             });
         //    },
         //    clkMn6_ssbondsNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_ssbondsNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_ssbondsNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.opts["ssbonds"] = "no";
                let select = "set disulfide bonds off";
                thisClass.setLogCmd(select, true);
@@ -56338,7 +57476,7 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_clbondsYes: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_clbondsYes", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_clbondsYes", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                let select = "cross linkage";
                thisClass.setLogCmd(select, true);
                //ic.bShowCrossResidueBond = true;
@@ -56347,13 +57485,13 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clkMn6_clbondsExport: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_clbondsExport", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_clbondsExport", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.viewInterPairsCls.exportClbondPairs();
                thisClass.setLogCmd("export cross linkage pairs", false);
             });
         //    },
         //    clkMn6_clbondsNo: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn6_clbondsNo", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn6_clbondsNo", "click", function(e) { let ic = me.icn3d; e.preventDefault();
                ic.opts["clbonds"] = "no";
                let select = "set cross linkage off";
                thisClass.setLogCmd(select, true);
@@ -56363,7 +57501,43 @@ var icn3d = (function (exports) {
                ic.setOptionCls.setStyle('sidec', 'nothing');
             });
         //    },
-        }
+
+            $("#" + me.pre + "newvs2").on('submit', function() {
+                // fill the pdbstr
+                let pdbstr = ic.saveFileCls.getAtomPDB(ic.hAtoms);
+                $("#" + me.pre + "pdbstr").val(pdbstr);
+
+                return true;
+            });
+
+            $("#" + me.pre + "fssubmit").on('click', function() {
+                let pdbstr = ic.saveFileCls.getAtomPDB(ic.hAtoms);
+                let url = 'https://search.foldseek.com/api/ticket';
+
+
+                let template = "<!doctype html>\n<head>\n<title>Loading Foldseek</title>\n<style>\n  body {\n    background-color: #121212;\n    color: #fff;\n    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;\n    height: 100vh;\n    display: flex;\n    flex-direction: column;\n    flex-wrap: wrap;\n    justify-content: center;\n    align-items: center;\n  }\n  .loader {\n    display: block;\n    width: 80px;\n    height: 80px;\n  }\n  .loader:after {\n    content: \" \";\n    display: block;\n    width: 64px;\n    height: 64px;\n    margin: 8px;\n    border-radius: 50%;\n    border: 6px solid #fff;\n    border-color: #fff transparent #fff transparent;\n    animation: loader 1.2s linear infinite;\n  }\n  @keyframes loader {\n    0% {\n      transform: rotate(0deg);\n    }\n    100% {\n      transform: rotate(360deg);\n    }\n  }\n</style>\n</head>\n<body>\n<div>Foldseek is loading...</div><div class=\"loader\"></div>\n</body>";
+
+                let w = window.open('', '_blank');
+                w.document.body.innerHTML = template;
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: { 
+                        q : pdbstr,
+                        database: ["afdb50", "afdb-swissprot", "gmgcl_id", "pdb100"],
+                        mode: "3diaa"
+                    },
+                    dataType: 'text',
+                    success: function(data) {
+                        w.location = 'https://search.foldseek.com/queue/' + JSON.parse(data).id;
+                    },
+                    error : function(xhr, textStatus, errorThrown ) {
+                      console.log("Error in submitting data to Foldseek...");
+                    }
+                });
+            });
+        } 
 
         //Show the input command in log. If "bSetCommand" is true, the command will be saved in the state file as well.
         setLogCmd(str, bSetCommand, bAddLogs) {var me = this.icn3dui, ic = me.icn3d;
@@ -56444,26 +57618,24 @@ var icn3d = (function (exports) {
             let tdStr = '<td valign="top">';
             html += tdStr + this.setMenu1() + '</td>';
 
-            //if(!me.cfg.simplemenu) {
-                html += tdStr + this.setMenu2() + '</td>';
-            //}
+            html += tdStr + this.setMenu2() + '</td>';
 
             html += tdStr + this.setMenu2b() + '</td>';
             html += tdStr + this.setMenu3() + '</td>';
             html += tdStr + this.setMenu4() + '</td>';
 
-            //if(!me.cfg.simplemenu) {
-                html += tdStr + this.setMenu5() + '</td>';
-                //html += tdStr + this.setMenu5b() + '</td>';
-                html += tdStr + this.setMenu6() + '</td>';
+            html += tdStr + this.setMenu5() + '</td>';
+            //html += tdStr + this.setMenu5b() + '</td>';
+            html += tdStr + this.setMenu6() + '</td>';
 
-                html += tdStr + "<div style='position:relative; margin-left:6px;'>" + str1;
-                html += "<div class='icn3d-commandTitle' style='min-width:40px; margin-top: 3px; white-space: nowrap;'>" + str2;
+            me.htmlCls.shownMenus = me.hashUtilsCls.cloneHash(me.htmlCls.simpleMenus); 
 
-                html += tdStr + '<div class="icn3d-commandTitle" style="white-space:nowrap; margin-top:10px; border-left:solid 1px #888888"><span id="' + me.pre +  'selection_expand" class="icn3d-expand icn3d-link" style="display:block;" title="Expand">' + me.htmlCls.space2 + 'Toolbar <span class="ui-icon ui-icon-plus" style="width:15px"></span>' + me.htmlCls.space2 + '</span><span id="' + me.pre +  'selection_shrink" class="icn3d-shrink icn3d-link" style="display:none;" title="Shrink">' + me.htmlCls.space2 + 'Toolbar <span class="ui-icon ui-icon-minus" style="width:15px"></span>' + me.htmlCls.space2 + '</span></div></td>';
+            html += tdStr + "<div style='position:relative; margin-left:6px;'>" + str1;
+            html += "<div class='icn3d-commandTitle' style='min-width:40px; margin-top: 3px; white-space: nowrap;'>" + str2;
 
-                html += tdStr + '<div class="icn3d-commandTitle" style="white-space:nowrap; margin-top:8px; border-left:solid 1px #888888">' + me.htmlCls.space2 + '<input type="text" id="' + me.pre + 'search_seq" size="10" placeholder="one-letter seq."> <button style="white-space:nowrap;" id="' + me.pre + 'search_seq_button">Search</button> <a style="text-decoration: none;" href="' + me.htmlCls.baseUrl + 'icn3d/icn3d.html#selectb" target="_blank" title="Specification tips">?</a></div></td>';
-            //}
+            html += tdStr + '<div class="icn3d-commandTitle" style="white-space:nowrap; margin-top:10px; border-left:solid 1px #888888"><span id="' + me.pre +  'selection_expand" class="icn3d-expand icn3d-link" style="display:block;" title="Expand">' + me.htmlCls.space2 + 'Toolbar <span class="ui-icon ui-icon-plus" style="width:15px"></span>' + me.htmlCls.space2 + '</span><span id="' + me.pre +  'selection_shrink" class="icn3d-shrink icn3d-link" style="display:none;" title="Shrink">' + me.htmlCls.space2 + 'Toolbar <span class="ui-icon ui-icon-minus" style="width:15px"></span>' + me.htmlCls.space2 + '</span></div></td>';
+
+            html += tdStr + '<div class="icn3d-commandTitle" style="white-space:nowrap; margin-top:8px; border-left:solid 1px #888888">' + me.htmlCls.space2 + '<input type="text" id="' + me.pre + 'search_seq" size="10" placeholder="one-letter seq."> <button style="white-space:nowrap;" id="' + me.pre + 'search_seq_button">Search</button> <a style="text-decoration: none;" href="' + me.htmlCls.baseUrl + 'icn3d/icn3d.html#selectb" target="_blank" title="Specification tips">?</a></div></td>';
 
             html += "</tr>";
             html += "</table>";
@@ -56578,6 +57750,8 @@ var icn3d = (function (exports) {
             html += this.setMenu5_base();
             html += liStr + ">Help</span>";
             html += this.setMenu6_base();
+
+            me.htmlCls.shownMenus = me.hashUtilsCls.cloneHash(me.htmlCls.simpleMenus); 
 
             html += "<li><div style='position:relative; margin-top:-6px;'>" + str1;
             html += "<div class='icn3d-commandTitle' style='margin-top: 3px; white-space: nowrap;'>" + str2;
@@ -56722,7 +57896,7 @@ var icn3d = (function (exports) {
 
             // line-awesome: https://icons8.com/line-awesome
             // File menu
-            html += tdStr + this.setIcon(iconType, 'tool_mmdbid', 'Input PDB or MMDB ID', 'id', undefined, true) + "</td>";
+            html += tdStr + this.setIcon(iconType, 'tool_mmdbafid', 'Input PDB/MMDB/AlphaFold IDs', 'id', undefined, true) + "</td>";
             html += tdStr + this.setIcon(iconType, 'tool_pdbfile', 'Input PDB Files (appendable)', 'file-alt') + "</td>";
             html += tdStr + this.setIcon(iconType, 'tool_sharelink', 'Get Share Link', 'link') + "</td>";
             html += tdStr + this.setIcon(iconType, 'saveimage', 'Save iCn3D PNG Image', 'camera') + "</td>";
@@ -56877,159 +58051,163 @@ var icn3d = (function (exports) {
             let html = "";
 
             html += "<ul class='icn3d-mn-item'>";
-            html += "<li><a href='https://www.ncbi.nlm.nih.gov/structure' target='_blank'>Search Structure " + me.htmlCls.wifiStr + "</a></li>";
+            //html += "<li><a href='https://www.ncbi.nlm.nih.gov/structure' target='_blank'>Search Structure " + me.htmlCls.wifiStr + "</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('mn1_searchstru', "https://www.ncbi.nlm.nih.gov/structure", "Search Structure " + me.htmlCls.wifiStr, 1, 1);
 
-            html += "<li><span>Search Similar</span>";
+            //html += "<li><span>Search Similar</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_searchsimilar', 'Search Similar', undefined, undefined, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getLink('mn1_vastplus', 'NCBI VAST+ (PDB Assembly)' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_vast', 'NCBI VAST (PDB)' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_foldseek', 'Foldseek (PDB & AlphaFold)' + me.htmlCls.wifiStr);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_vastplus', 'NCBI VAST+ (PDB Complex)' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_vast', 'NCBI VAST (PDB Chain)' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_foldseek', 'Foldseek (PDB & AlphaFold)' + me.htmlCls.wifiStr, undefined, 2);
             html += "</ul>";
+            html += "</li>";
 
-            html += "<li><span>Retrieve by ID</span>";
+            //html += "<li><span>Retrieve by ID</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_retrievebyid', 'Retrieve by ID', undefined, 1, 1); 
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getLink('mn1_mmdbid', 'MMDB ID ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_mmtfid', 'MMTF ID ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_pdbid', 'PDB ID ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_afid', 'AlphaFold UniProt ID ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_mmdbafid', 'MMDB or AlphaFold IDs' + me.htmlCls.wifiStr);
-            if(!me.cfg.simplemenu) {
-                html += me.htmlCls.setHtmlCls.getLink('mn1_opmid', 'OPM PDB ID ' + me.htmlCls.wifiStr);
-                html += me.htmlCls.setHtmlCls.getLink('mn1_mmcifid', 'mmCIF ID ' + me.htmlCls.wifiStr);
-                html += me.htmlCls.setHtmlCls.getLink('mn1_gi', 'NCBI gi ' + me.htmlCls.wifiStr);
-            }
+            
+            html += me.htmlCls.setHtmlCls.getLink('mn1_mmdbafid', 'PDB/MMDB/AlphaFold IDs' + me.htmlCls.wifiStr, 1, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_mmdbid', 'NCBI MMDB ID (annotation) ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_mmtfid', 'RCSB MMTF ID (fast) ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_pdbid', 'RCSB PDB ID ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_afid', 'AlphaFold UniProt ID ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_opmid', 'OPM PDB ID ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_mmcifid', 'RCSB mmCIF ID ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_gi', 'NCBI gi ' + me.htmlCls.wifiStr, undefined, 2);
+            //html += me.htmlCls.setHtmlCls.getLink('mn1_refseq', 'NCBI RefSeq ' + me.htmlCls.wifiStr, undefined, 2);
+
             //html += me.htmlCls.setHtmlCls.getLink('mn1_uniprotid', 'UniProt ID ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_cid', 'PubChem CID ' + me.htmlCls.wifiStr);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_cid', 'PubChem CID ' + me.htmlCls.wifiStr, 1, 2);
             
             html += "</ul>";
             html += "</li>";
-            html += "<li><span>Open File</span>";
+
+            //html += "<li><span>Open File</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_openfile', 'Open File', undefined, 1, 1);
             html += "<ul>";
     //        html += me.htmlCls.setHtmlCls.getLink('mn1_pdbfile', 'PDB File');
     //        html += me.htmlCls.setHtmlCls.getLink('mn1_pdbfile_app', 'PDB File (append)');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_pdbfile_app', 'PDB Files (appendable)');
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn1_mmciffile', 'mmCIF File');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_mol2file', 'Mol2 File');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_sdffile', 'SDF File');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_xyzfile', 'XYZ File');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_afmapfile', 'AlphaFold PAE File');
+            html += me.htmlCls.setHtmlCls.getLink('mn1_pdbfile_app', 'PDB Files (appendable)', 1, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_mmciffile', 'mmCIF File', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_mol2file', 'Mol2 File', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_sdffile', 'SDF File', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_xyzfile', 'XYZ File', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_afmapfile', 'AlphaFold PAE File', undefined, 2);
 
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn1_urlfile', 'URL(Same Host) ' + me.htmlCls.wifiStr);
-            html += "<li>-</li>";
-            html += me.htmlCls.setHtmlCls.getLink('mn1_pngimage', 'iCn3D PNG Image');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_state', 'State/Script File');
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn1_fixedversion', 'Share Link in Archived Ver. ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_selection', 'Selection File');
-            
-            if(!me.cfg.simplemenu) {
-                html += "<li>-</li>";
+            html += me.htmlCls.setHtmlCls.getLink('mn1_urlfile', 'URL(Same Host) ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+            html += me.htmlCls.setHtmlCls.getLink('mn1_pngimage', 'iCn3D PNG Image', 1, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_state', 'State/Script File', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_fixedversion', 'Share Link in Archived Ver. ' + me.htmlCls.wifiStr, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_selection', 'Selection File', undefined, 2);
 
-                html += "<li><span>Electron Density(DSN6)</span>";
-                html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getLink('mn1_dsn6', 'Local File');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_dsn6url', 'URL(Same Host) ' + me.htmlCls.wifiStr);
-                html += "</ul>";
-            }
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+
+            //html += "<li><span>Electron Density(DSN6)</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_dsn6wrap', 'Electron Density(DSN6)', undefined, undefined, 2);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getLink('mn1_dsn6', 'Local File', undefined, 3);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_dsn6url', 'URL(Same Host) ' + me.htmlCls.wifiStr, undefined, 3);
+            html += "</ul>";
 
             html += "</ul>";
             html += "</li>";
-            html += "<li><span>Align</span>";
+
+            //html += "<li><span>Align</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_alignwrap', 'Align', undefined, 1, 1);
             html += "<ul>";
             
-            html += "<li><span>Multiple Chains</span>";
+            //html += "<li><span>Multiple Chains</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_chainalignwrap', 'Multiple Chains', undefined, 1, 2);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn1_chainalignRad', 'mn1_chainalign', 'by Structure Alignment ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getRadio('mn1_chainalignRad', 'mn1_chainalign2', 'by Sequence Alignment ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getRadio('mn1_chainalignRad', 'mn1_chainalign3', 'Residue by Residue');
+            html += me.htmlCls.setHtmlCls.getRadio('mn1_chainalignRad', 'mn1_chainalign', 'by Structure Alignment ' + me.htmlCls.wifiStr, undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadio('mn1_chainalignRad', 'mn1_chainalign2', 'by Sequence Alignment ' + me.htmlCls.wifiStr, undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadio('mn1_chainalignRad', 'mn1_chainalign3', 'Residue by Residue', undefined, undefined, 3);
             html += "</ul>";
             html += "</li>";
 
-            html += "<li><span>Structure to Structure</span>";
+            //html += "<li><span>Protein Complexes</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_aligntwostru', 'Protein Complexes', undefined, undefined, 2);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getLink('mn1_align', 'Two PDB Structures ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getLink('mn1_alignaf', 'Two AlphaFold Structures ' + me.htmlCls.wifiStr);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_align', 'Two PDB Structures ' + me.htmlCls.wifiStr, undefined, 3);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_alignaf', 'Two AlphaFold Structures ' + me.htmlCls.wifiStr, undefined, 3);
             html += "</ul>";
 
-            html += me.htmlCls.setHtmlCls.getLink('mn1_blast_rep_id', 'Sequence to Structure');
+            html += me.htmlCls.setHtmlCls.getLink('mn1_blast_rep_id', 'Sequence to Structure', undefined, 2);
 
             html += "</ul>";
             html += "</li>";
 
-            html += "<li id='" + me.pre + "mn2_realignWrap'><span>Realign Selection</span>";
+            //html += "<li id='" + me.pre + "mn2_realignWrap'><span>Realign Selection</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_realignWrap', 'Realign Selection', undefined, undefined, 1);
             html += "<ul>";
 
-            html += me.htmlCls.setHtmlCls.getRadio('mn2_realign', 'mn2_realignonstruct', 'by Structure Alignment ' + me.htmlCls.wifiStr);
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_chainrealignwrap', 'Multiple Chains', undefined, undefined, 2);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_realign', 'mn2_realignonstruct', 'by Structure Alignment ' + me.htmlCls.wifiStr, undefined, undefined, 3);
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_realign', 'mn2_realignonseqalign', 'by Sequence Alignment ' + me.htmlCls.wifiStr, undefined, undefined, 3);
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_realign', 'mn2_realignresbyres', 'Residue by Residue', undefined, undefined, 3);
+            html += "</ul>";
 
-            html += me.htmlCls.setHtmlCls.getRadio('mn2_realign', 'mn2_realignonseqalign', 'by Sequence Alignment ' + me.htmlCls.wifiStr);
-            html += me.htmlCls.setHtmlCls.getRadio('mn2_realign', 'mn2_realignresbyres', 'Residue by Residue');
+            html += me.htmlCls.setHtmlCls.getLink('mn2_realigntwostru', 'Protein Complexes', undefined, 2);
+
             html += "</ul>";
             html += "</li>";
 
-            html += "<li><span>3D Printing</span>";
+            //html += "<li><span>3D Printing</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_3dpprint', '3D Printing', undefined, 1, 1);
             html += "<ul>";
             if(me.cfg.cid === undefined) {
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportVrmlStab', 'WRL/VRML(Color, W/ Stab.)');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportStlStab', 'STL(W/ Stabilizers)');
-                html += "<li>-</li>";
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportVrml', 'WRL/VRML(Color)');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportStl', 'STL');
+                html += me.htmlCls.setHtmlCls.getLink('mn1_exportVrmlStab', 'WRL/VRML(Color, W/ Stab.)', 1, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_exportStlStab', 'STL(W/ Stabilizers)', 1, 2);
+                html += me.htmlCls.setHtmlCls.getMenuSep();
+                html += me.htmlCls.setHtmlCls.getLink('mn1_exportVrml', 'WRL/VRML(Color)', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_exportStl', 'STL', undefined, 2);
 
-                if(!me.cfg.simplemenu) {
-                    html += "<li>-</li>";
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerYes', 'Add All Stabilizers');
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerNo', 'Remove All Stabilizers');
-                    html += "<li>-</li>";
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerOne', 'Add One Stabilizer');
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerRmOne', 'Remove One Stabilizer');
-                    html += "<li>-</li>";
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_thicknessSet', 'Set Thickness');
-                    //html += me.htmlCls.setHtmlCls.getLink('mn1_thicknessReset', 'Reset Thickness');
-                }
+                html += me.htmlCls.setHtmlCls.getMenuSep();
+                html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerYes', 'Add All Stabilizers', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerNo', 'Remove All Stabilizers', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getMenuSep();
+                html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerOne', 'Add One Stabilizer', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_stabilizerRmOne', 'Remove One Stabilizer', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getMenuSep();
+                html += me.htmlCls.setHtmlCls.getLink('mn1_thicknessSet', 'Set Thickness', undefined, 2);
             }
             else {
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportVrml', 'VRML(Color)');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportStl', 'STL');
+                html += me.htmlCls.setHtmlCls.getLink('mn1_exportVrml', 'VRML(Color)', 1, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_exportStl', 'STL', 1, 2);
             }
 
             html += "</ul>";
             html += "</li>";
 
-            html += "<li><span>Save Files</span>";
+            //html += "<li><span>Save File</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_savefile', 'Save File', undefined, 1, 1);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas', 'iCn3D PNG Image');
+            //html += "<li><span>iCn3D PNG Image</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_savepngimage', 'iCn3D PNG Image', undefined, 1, 2);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas', 'Original Size & HTML', 1, 3);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas1', 'Original Size', undefined, 3);
 
-            html += "<li><span>iCn3D PNG Image</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas', 'Original Size & HTML');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas1', 'Original Size');
-            if(!me.cfg.simplemenu) {
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas2', '2X Large');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas4', '4X Large');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas8', '8X Large');
-            }
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas2', '2X Large', undefined, 3);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas4', '4X Large', undefined, 3);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCanvas8', '8X Large', undefined, 3);
+
             html += "</ul>";
             html += "</li>";
 
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportState', 'State File');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportSelections', 'Selection File');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportSelDetails', 'Selection Details');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCounts', 'Residue Counts');
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportState', 'State File', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportSelections', 'Selection File', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportSelDetails', 'Selection Details', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportCounts', 'Residue Counts', undefined, 2);
 
-        /*
-            html += "<li><span>PDB</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportPdbRes', 'Selected Residues');
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportPdbChain', 'Selected Chains');
-            html += "<li><br/></li>";
-            html += "</ul>";
-            html += "</li>";
-        */
-
-            html += me.htmlCls.setHtmlCls.getLink('mn1_exportPdbRes', 'PDB');
-            html += me.htmlCls.setHtmlCls.getLink('delphipdbh', 'PDB with Hydrogens');
+            html += me.htmlCls.setHtmlCls.getLink('mn1_exportPdbRes', 'PDB', 1, 2);
+            html += me.htmlCls.setHtmlCls.getLink('delphipdbh', 'PDB with Hydrogens', undefined, 2);
 
             if(me.cfg.cid === undefined) {
-                html += me.htmlCls.setHtmlCls.getLink('mn1_exportSecondary', 'Secondary Structure');
+                html += me.htmlCls.setHtmlCls.getLink('mn1_exportSecondary', 'Secondary Structure', undefined, 2);
             }
 
             html += "<li><br/></li>";
@@ -57037,9 +58215,21 @@ var icn3d = (function (exports) {
             html += "</ul>";
             html += "</li>";
 
-            html += me.htmlCls.setHtmlCls.getLink('mn1_sharelink', 'Share Link ' + me.htmlCls.wifiStr);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_sharelink', 'Share Link ' + me.htmlCls.wifiStr, 1, 1);
 
-            html += me.htmlCls.setHtmlCls.getLink('mn1_replayon', 'Replay Each Step');
+            html += me.htmlCls.setHtmlCls.getLink('mn1_replayon', 'Replay Each Step', undefined, 1);
+
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+
+            html += me.htmlCls.setHtmlCls.getMenuText('mn1_menuwrap', 'Customize Menus', undefined, 1, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getLink('mn1_menuall', 'All Menus', 1, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_menusimple', 'Simple Menus', 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+            html += me.htmlCls.setHtmlCls.getLink('mn1_menupref', 'Preferences', 1, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn1_menuloadpref', 'Load Preferences', 1, 2);
+            html += "</ul>";
+            html += "</li>";
 
             html += "<li><br/></li>";
 
@@ -57075,87 +58265,86 @@ var icn3d = (function (exports) {
 
             html += "<ul class='icn3d-mn-item'>";
 
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn2_definedsets', 'Defined Sets');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_selectall', 'All');
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn2_selectdisplayed', 'Displayed Set');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_aroundsphere', 'by Distance');
+            html += me.htmlCls.setHtmlCls.getLink('mn2_definedsets', 'Defined Sets', 1, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_selectall', 'All', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_selectdisplayed', 'Displayed Set', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_aroundsphere', 'by Distance', 1, 1);
 
-            html += "<li><span>by Property</span>";
+            //html += "<li><span>by Property</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_selbyprop', 'by Property', undefined, undefined, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getLink('mn2_propPos', 'Positive');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_propNeg', 'Negative');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_propHydro', 'Hydrophobic');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_propPolar', 'Polar');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_propBfactor', 'B-factor');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_propSolAcc', 'Solvent Accessibility');
+            html += me.htmlCls.setHtmlCls.getLink('mn2_propPos', 'Positive', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_propNeg', 'Negative', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_propHydro', 'Hydrophobic', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_propPolar', 'Polar', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_propBfactor', 'B-factor/pLDDT', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_propSolAcc', 'Solvent Accessibility', undefined, 2);
             html += "</ul>";
             html += "</li>";
 
-            if(!me.cfg.simplemenu) {
-                html += me.htmlCls.setHtmlCls.getLink('mn2_selectcomplement', 'Inverse');
-                html += me.htmlCls.setHtmlCls.getLink('mn2_selectmainchains', 'Main Chains');
-                html += me.htmlCls.setHtmlCls.getLink('mn2_selectsidechains', 'Side Chains');
-                html += me.htmlCls.setHtmlCls.getLink('mn2_selectmainsidechains', 'Main & Side Chains');
-                html += me.htmlCls.setHtmlCls.getLink('mn2_command', 'Advanced');
-            }
+            html += me.htmlCls.setHtmlCls.getLink('mn2_selectcomplement', 'Inverse', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_selectmainchains', 'Main Chains', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_selectsidechains', 'Side Chains', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_selectmainsidechains', 'Main & Side Chains', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_command', 'Advanced', undefined, 1);
 
             if(me.cfg.cid === undefined) {
-                html += "<li><span>Select on 3D</span>";
+                //html += "<li><span>Select on 3D</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn2_selon3d', 'Select on 3D', undefined, 1, 1);
                 html += "<ul>";
 
                 html += "<li>\"Alt\"+Click: start selection</li>";
                 html += "<li>\"Ctrl\"+Click: union selection</li>";
                 html += "<li>\"Shift\"+Click: range Selection</li>";
-                html += "<li>-</li>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkChain', 'Chain');
+                html += me.htmlCls.setHtmlCls.getMenuSep();
+                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkChain', 'Chain', undefined, 1, 2);
                 if(me.cfg.mmdbid !== undefined || me.cfg.gi !== undefined) {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkDomain', '3D Domain');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkDomain', '3D Domain', undefined, undefined, 2);
                 }
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkStrand', 'Strand/Helix');
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkResidue', 'Residue', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkYes', 'Atom');
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkNo', 'None');
+                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkStrand', 'Strand/Helix', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkResidue', 'Residue', true, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkYes', 'Atom', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn2_pk', 'mn2_pkNo', 'None', undefined, undefined, 2);
                 html += "</ul>";
                 html += "</li>";
             }
             else {
                 if(me.utilsCls.isMobile()) {
-                    html += "<li><span>Touch to pick</span>";
+                    html += "<li><span>Touch to pick</span></li>";
                 }
                 else {
-                    html += "<li><span>Picking with<br>\"Alt\" + Click</span>";
+                    html += "<li><span>Picking with<br>\"Alt\" + Click</span></li>";
                 }
             }
 
-            html += "<li>-</li>";
+            html += me.htmlCls.setHtmlCls.getMenuSep();
 
-            html += me.htmlCls.setHtmlCls.getLink('mn2_saveselection', 'Save Selection');
-            html += me.htmlCls.setHtmlCls.getLink('clearall', 'Clear Selection');
+            html += me.htmlCls.setHtmlCls.getLink('mn2_saveselection', 'Save Selection', 1, 1);
+            html += me.htmlCls.setHtmlCls.getLink('clearall', 'Clear Selection', undefined, 1);
 
-            html += "<li>-</li>";
+            html += me.htmlCls.setHtmlCls.getMenuSep();
 
-            if(!me.cfg.simplemenu) {
-                html += "<li><span>Highlight Color</span>";
-                html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_clr', 'mn2_hl_clrYellow', 'Yellow', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_clr', 'mn2_hl_clrGreen', 'Green');
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_clr', 'mn2_hl_clrRed', 'Red');
-                html += "</ul>";
-                html += "</li>";
-                html += "<li><span>Highlight Style</span>";
-                html += "<ul>";
+            //html += "<li><span>Highlight Color</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_hlcolor', 'Highlight Color', undefined, undefined, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_clr', 'mn2_hl_clrYellow', 'Yellow', true, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_clr', 'mn2_hl_clrGreen', 'Green', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_clr', 'mn2_hl_clrRed', 'Red', undefined, undefined, 2);
+            html += "</ul>";
+            html += "</li>";
+            //html += "<li><span>Highlight Style</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_hlstyle', 'Highlight Style', undefined, undefined, 1);
+            html += "<ul>";
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_style', 'mn2_hl_styleOutline', 'Outline', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_style', 'mn2_hl_styleObject', '3D Objects');
-                //html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_style', 'mn2_hl_styleNone', 'No Highlight');
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_style', 'mn2_hl_styleOutline', 'Outline', true, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn2_hl_style', 'mn2_hl_styleObject', '3D Objects', undefined, undefined, 2);
 
-                html += "</ul>";
-                html += "</li>";
-            }
+            html += "</ul>";
+            html += "</li>";
 
             //html += me.htmlCls.setHtmlCls.getLink('mn2_hl_styleNone', 'Clear Highlight');
 
-            html += me.htmlCls.setHtmlCls.getLink('toggleHighlight2', 'Toggle Highlight');
+            html += me.htmlCls.setHtmlCls.getLink('toggleHighlight2', 'Toggle Highlight', 1, 1);
 
             html += "<li><br/></li>";
 
@@ -57189,108 +58378,111 @@ var icn3d = (function (exports) {
             let html = "";
             html += "<ul class='icn3d-mn-item'>";
 
-            html += me.htmlCls.setHtmlCls.getLink('mn2_show_selected', 'View Selection');
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn2_hide_selected', 'Hide Selection');
-            html += me.htmlCls.setHtmlCls.getLink('mn2_selectedcenter', 'Zoom in Selection');
-            html += me.htmlCls.setHtmlCls.getLink('mn6_center', 'Center Selection');
+            html += me.htmlCls.setHtmlCls.getLink('mn2_show_selected', 'View Selection', 1, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_hide_selected', 'Hide Selection', 1, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn2_selectedcenter', 'Zoom in Selection', 1, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn6_center', 'Center Selection', undefined, 1);
             html += me.htmlCls.setHtmlCls.getLink('mn2_fullstru', 'View Full Structure');
-            html += "<li id='" + me.pre + "mn2_alternateWrap'><span id='" + me.pre + "mn2_alternate' class='icn3d-link'>Alternate(Key \"a\")</span></li>";
+            //html += "<li id='" + me.pre + "mn2_alternateWrap'><span id='" + me.pre + "mn2_alternate' class='icn3d-link'>Alternate(Key \"a\")</span></li>";
+            html += me.htmlCls.setHtmlCls.getLinkWrapper('mn2_alternate', 'Alternate(Key "a")', 'mn2_alternateWrap', undefined, 1);
 
             if(me.cfg.opmid !== undefined) {
-                html += "<li id='" + me.pre + "togglememli'><span id='" + me.pre + "togglemem' class='icn3d-link'>Toggle Membrane</span></li>";
-                html += "<li id='" + me.pre + "adjustmemli'><span id='" + me.pre + "adjustmem' class='icn3d-link'>Adjust Membrane</span></li>";
-                html += "<li id='" + me.pre + "selectplaneli'><span id='" + me.pre + "selectplane' class='icn3d-link'>Select between<br>Two X-Y Planes</span></li>";
+                //html += "<li id='" + me.pre + "togglememli'><span id='" + me.pre + "togglemem' class='icn3d-link'>Toggle Membrane</span></li>";
+                html += me.htmlCls.setHtmlCls.getLinkWrapper('togglemem', 'Toggle Membrane', 'togglememli', undefined, 1);
             }
-            else {
-                html += "<li id='" + me.pre + "togglememli' style='display:none'><span id='" + me.pre + "togglemem' class='icn3d-link'>Toggle Membrane</span></li>";
-                html += "<li id='" + me.pre + "adjustmemli' style='display:none'><span id='" + me.pre + "adjustmem' class='icn3d-link'>Adjust Membrane</span></li>";
-                html += "<li id='" + me.pre + "selectplaneli' style='display:none'><span id='" + me.pre + "selectplane' class='icn3d-link'>Select between<br>Two X-Y Planes</span></li>";
+            else if(me.cfg.mmdbafid !== undefined || me.cfg.afid !== undefined) {
+                // hide by default
+                html += me.htmlCls.setHtmlCls.getLinkWrapper('togglemem', 'Toggle Membrane', 'togglememli', undefined, 1, true);
             }
 
-            html += "<li>-</li>";
-
-            let liStr = "<li><a href='";
-
-            html += "<li><span>VR & AR Hints</span>";
-            html += "<ul>";
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#vr' target='_blank'>VR: VR Headsets</a></li>";
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#ar' target='_blank'>AR: Chrome in Android</a></li>";
-            html += "</ul>";
-    /*
-            let liStr = "<li><a href='";
-
-            html += "<ul class='icn3d-mn-item'>";
-
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#about' target='_blank'>About iCn3D<span style='font-size:0.9em'> " + me.REVISION + "</span></a></li>";
-
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#gallery' target='_blank'>Live Gallery " + me.htmlCls.wifiStr + "</a></li>";
-    */
-
-            html += me.htmlCls.setHtmlCls.getLink('mn6_sidebyside', 'Side by Side');
-
-            html += "<li><span>Rotate</span>";
-            html += "<ul>";
-
-            html += "<li><span>Rotate 90&deg;</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate90', 'mn6_rotatex', 'X-axis(Shift + Key M)');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate90', 'mn6_rotatey', 'Y-axis(Shift + Key J)');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate90', 'mn6_rotatez', 'Z-axis');
-            html += "</ul>";
-            html += "</li>";
-            html += "<li><span>Auto Rotation</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotateleft', 'Rotate Left');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotateright', 'Rotate Right');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotateup', 'Rotate Up');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotatedown', 'Rotate Down');
-            html += "</ul>";
-            html += "</li>";
-
-            html += "</ul>";
-            html += "</li>";
-
-            html += "<li><span>Camera</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_camera', 'mn6_cameraPers', 'Perspective', true);
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_camera', 'mn6_cameraOrth', 'Orthographic');
-            html += "</ul>";
-            html += "</li>";
-            html += "<li><span>Fog for Selection</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_showfog', 'mn6_showfogYes', 'On');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_showfog', 'mn6_showfogNo', 'Off', true);
-            html += "</ul>";
-            html += "</li>";
-            html += "<li><span>Slab for Selection</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_showslab', 'mn6_showslabYes', 'On');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_showslab', 'mn6_showslabNo', 'Off', true);
-            html += "</ul>";
-            html += "</li>";
-            html += "<li><span>XYZ-axes</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_showaxis', 'mn6_showaxisYes', 'Original');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_showaxis', 'mn6_showaxisSel', 'Prin. Axes on Sel.');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_showaxis', 'mn6_showaxisNo', 'Hide', true);
-            html += "</ul>";
-            html += "</li>";
-
-            html += "<li>-</li>";
-
-            html += "<li><span>Reset</span>";
-            html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_reset', 'reset', 'All');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_reset', 'mn6_resetOrientation', 'Orientation');
-            html += "</ul>";
-            html += "</li>";
-
-            if(!me.cfg.simplemenu) {
-                html += me.htmlCls.setHtmlCls.getLink('mn6_back', 'Undo');
-                html += me.htmlCls.setHtmlCls.getLink('mn6_forward', 'Redo');
+            if(me.cfg.opmid !== undefined) {
+                //html += "<li id='" + me.pre + "adjustmemli'><span id='" + me.pre + "adjustmem' class='icn3d-link'>Adjust Membrane</span></li>";
+                html += me.htmlCls.setHtmlCls.getLinkWrapper('adjustmem', 'Adjust Membrane', 'adjustmemli', undefined, 1);
+                //html += "<li id='" + me.pre + "selectplaneli'><span id='" + me.pre + "selectplane' class='icn3d-link'>Select between<br>Two X-Y Planes</span></li>";
+                html += me.htmlCls.setHtmlCls.getLinkWrapper('selectplane', 'Select between<br>Two X-Y Planes</span>', 'selectplaneli', undefined, 1);
             }
 
-            html += me.htmlCls.setHtmlCls.getLink('mn6_fullscreen', 'Full Screen');
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+
+            //html += "<li><span>VR & AR Hints</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_vrarhints', 'VR & AR Hints', undefined, 1, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl("vrhint", me.htmlCls.baseUrl + "icn3d/icn3d.html#vr", "VR: VR Headsets", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl("arhint", me.htmlCls.baseUrl + "icn3d/icn3d.html#ar", "AR: Chrome in Android", 1, 2);
+            html += "</ul>";
+            html += "</li>";
+
+            html += me.htmlCls.setHtmlCls.getLink('mn6_sidebyside', 'Side by Side', 1, 1);
+
+            //html += "<li><span>Rotate</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_rotate', 'Rotate', undefined, 1, 1);
+            html += "<ul>";
+
+            //html += "<li><span>Rotate 90&deg;</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_rotate90', 'Rotate 90&deg;', undefined, undefined, 2);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate90', 'mn6_rotatex', 'X-axis(Shift + Key M)', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate90', 'mn6_rotatey', 'Y-axis(Shift + Key J)', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate90', 'mn6_rotatez', 'Z-axis', undefined, undefined, 2);
+            html += "</ul>";
+            html += "</li>";
+            //html += "<li><span>Auto Rotation</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_rotateauto', 'Auto Rotation', undefined, 1, 2);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotateleft', 'Rotate Left', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotateright', 'Rotate Right', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotateup', 'Rotate Up', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_rotate', 'mn6_rotatedown', 'Rotate Down', undefined, 1, 3);
+            html += "</ul>";
+            html += "</li>";
+
+            html += "</ul>";
+            html += "</li>";
+
+            //html += "<li><span>Camera</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_camera', 'Camera', undefined, undefined, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_camera', 'mn6_cameraPers', 'Perspective', true, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_camera', 'mn6_cameraOrth', 'Orthographic', undefined, undefined, 2);
+            html += "</ul>";
+            html += "</li>";
+            //html += "<li><span>Fog for Selection</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_fog', 'Fog for Selection', undefined, undefined, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_showfog', 'mn6_showfogYes', 'On', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_showfog', 'mn6_showfogNo', 'Off', true, undefined, 2);
+            html += "</ul>";
+            html += "</li>";
+            //html += "<li><span>Slab for Selection</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_slab', 'Slab for Selection', undefined, undefined, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_showslab', 'mn6_showslabYes', 'On', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_showslab', 'mn6_showslabNo', 'Off', true, undefined, 2);
+            html += "</ul>";
+            html += "</li>";
+            //html += "<li><span>XYZ-axes</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_axes', 'XYZ-axes', undefined, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_showaxis', 'mn6_showaxisYes', 'Original', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_showaxis', 'mn6_showaxisSel', 'Prin. Axes on Sel.', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_showaxis', 'mn6_showaxisNo', 'Hide', true, undefined, 2);
+            html += "</ul>";
+            html += "</li>";
+
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+
+            //html += "<li><span>Reset</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn2_resetwrap', 'Reset', undefined, 1, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_reset', 'reset', 'All', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_reset', 'mn6_resetOrientation', 'Orientation', undefined, 1, 2);
+            html += "</ul>";
+            html += "</li>";
+
+            html += me.htmlCls.setHtmlCls.getLink('mn6_back', 'Undo', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn6_forward', 'Redo', undefined, 1);
+
+            html += me.htmlCls.setHtmlCls.getLink('mn6_fullscreen', 'Full Screen', undefined, 1);
         //    html += me.htmlCls.setHtmlCls.getLink('mn6_exitfullscreen', 'Exit Full Screen');
 
             html += "<li><br/></li>";
@@ -57328,243 +58520,253 @@ var icn3d = (function (exports) {
             html += "<ul class='icn3d-mn-item'>";
 
             if(me.cfg.cid === undefined) {
-                html += "<li><span>Proteins</span>";
+                //html += "<li><span>Proteins</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn3_proteinwrap', 'Proteins', undefined, 1, 1);
                 html += "<ul>";
                 if(me.cfg.align !== undefined || me.cfg.chainalign !== undefined) {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsRibbon', 'Ribbon');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsRibbon', 'Ribbon', undefined, 1, 2);
                 }
                 else {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsRibbon', 'Ribbon', true);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsRibbon', 'Ribbon', true, 1, 2);
                 }
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsStrand', 'Strand');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsCylinder', 'Cylinder and Plate');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsSchematic', 'Schematic');
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsStrand', 'Strand', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsCylinder', 'Cylinder and Plate', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsSchematic', 'Schematic', undefined, 1, 2);
 
                 if(me.cfg.align !== undefined || me.cfg.chainalign !== undefined) {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsCalpha', 'C Alpha Trace', true);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsCalpha', 'C Alpha Trace', true, 1, 2);
                 }
                 else {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsCalpha', 'C Alpha Trace');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsCalpha', 'C Alpha Trace', undefined, 1, 2);
                 }
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsBackbone', 'Backbone');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsBfactor', 'B-factor Tube');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsLines', 'Lines');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsStick', 'Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsBallstick', 'Ball and Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsSphere', 'Sphere');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsNo', 'Hide');
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsBackbone', 'Backbone', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsBfactor', 'B-factor Tube', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsLines', 'Lines', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsStick', 'Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsBallstick', 'Ball and Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsSphere', 'Sphere', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_proteins', 'mn3_proteinsNo', 'Hide', undefined, 1, 2);
                 html += "</ul>";
                 html += "</li>";
 
-                html += "<li><span>Side Chains</span>";
+                //html += "<li><span>Side Chains</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn3_sidecwrap', 'Side Chains', undefined, 1, 1);
                 html += "<ul>";
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecLines', 'Lines');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecStick', 'Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecBallstick', 'Ball and Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecSphere', 'Sphere');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecNo', 'Hide', true);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecLines', 'Lines', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecStick', 'Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecBallstick', 'Ball and Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecSphere', 'Sphere', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_sidec', 'mn3_sidecNo', 'Hide', true, 1, 2);
                 html += "</ul>";
                 html += "</li>";
 
-                html += "<li><span>Nucleotides</span>";
+                //html += "<li><span>Nucleotides</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn3_nuclwrap', 'Nucleotides', undefined, 1, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclCartoon', 'Cartoon', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclPhos', "O3' Trace");
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclBackbone', 'Backbone');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclSchematic', 'Schematic');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclLines', 'Lines');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclStick', 'Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclBallstick', 'Ball and Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclSphere', 'Sphere');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclNo', 'Hide');
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclCartoon', 'Cartoon', true, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclPhos', "O3' Trace", undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclBackbone', 'Backbone', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclSchematic', 'Schematic', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclLines', 'Lines', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclStick', 'Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclBallstick', 'Ball and Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclSphere', 'Sphere', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_nucl', 'mn3_nuclNo', 'Hide', undefined, 1, 2);
                 html += "</ul>";
                 html += "</li>";
 
-                html += "<li><span>Nucl. Bases</span>";
+                //html += "<li><span>Nucl. Bases</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn3_ntbasewrap', 'Nucl. Bases', undefined, 1, 1);
                 html += "<ul>";
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseLines', 'Lines');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseStick', 'Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseBallstick', 'Ball and Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseSphere', 'Sphere');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseNo', 'Hide', true);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseLines', 'Lines', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseStick', 'Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseBallstick', 'Ball and Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseSphere', 'Sphere', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_ntbase', 'mn3_ntbaseNo', 'Hide', true, 1, 2);
                 html += "</ul>";
                 html += "</li>";
             }
 
-            html += "<li><span>Chemicals</span>";
+            //html += "<li><span>Chemicals</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn3_ligwrap', 'Chemicals', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligLines', 'Lines');
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligLines', 'Lines', undefined, 1, 2);
             if(me.cfg.cid === undefined) {
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligStick', 'Stick', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligBallstick', 'Ball and Stick');
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligStick', 'Stick', true, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligBallstick', 'Ball and Stick', undefined, 1, 2);
             }
             else {
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligStick', 'Stick');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligBallstick', 'Ball and Stick', true);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligStick', 'Stick', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligBallstick', 'Ball and Stick', true, 1, 2);
             }
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligSchematic', 'Schematic');
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligSphere', 'Sphere');
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligNo', 'Hide');
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligSchematic', 'Schematic', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligSphere', 'Sphere', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_lig', 'mn3_ligNo', 'Hide', undefined, 1, 2);
             html += "</ul>";
             html += "</li>";
 
             //if(me.cfg.cid !== undefined) {
-                html += "<li><span>Hydrogens</span>";
+                //html += "<li><span>Hydrogens</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn3_hydrogenswrap', 'Hydrogens', undefined, 1, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_hydrogens', 'mn3_hydrogensYes', 'Show', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_hydrogens', 'mn3_hydrogensNo', 'Hide');
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_hydrogens', 'mn3_hydrogensYes', 'Show', true, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_hydrogens', 'mn3_hydrogensNo', 'Hide', undefined, 1, 2);
                 html += "</ul>";
                 html += "</li>";
             //}
 
             if(me.cfg.cid === undefined) {
-                html += "<li><span>Glycans</span>";
+                //html += "<li><span>Glycans</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn3_glycanwrap', 'Glycans', undefined, undefined, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_glycansCart', 'mn3_glycansCartYes', 'Show Cartoon');
-                html += me.htmlCls.setHtmlCls.getRadio('mn3_glycansCart', 'mn3_glycansCartNo', 'Hide Cartoon', true);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_glycansCart', 'mn3_glycansCartYes', 'Show Cartoon', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn3_glycansCart', 'mn3_glycansCartNo', 'Hide Cartoon', true, undefined, 2);
                 html += "</ul>";
                 html += "</li>";
             }
 
-            html += "<li><span>Ions</span>";
+            //html += "<li><span>Ions</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn3_ionswrap', 'Ions', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_ions', 'mn3_ionsSphere', 'Sphere', true);
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_ions', 'mn3_ionsDot', 'Dot');
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_ions', 'mn3_ionsNo', 'Hide');
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_ions', 'mn3_ionsSphere', 'Sphere', true, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_ions', 'mn3_ionsDot', 'Dot', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_ions', 'mn3_ionsNo', 'Hide', undefined, 1, 2);
             html += "</ul>";
             html += "</li>";
 
-            html += "<li><span>Water</span>";
+            //html += "<li><span>Water</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn3_waterwrap', 'Water', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_water', 'mn3_waterSphere', 'Sphere');
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_water', 'mn3_waterDot', 'Dot');
-            html += me.htmlCls.setHtmlCls.getRadio('mn3_water', 'mn3_waterNo', 'Hide', true);
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_water', 'mn3_waterSphere', 'Sphere', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_water', 'mn3_waterDot', 'Dot', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn3_water', 'mn3_waterNo', 'Hide', true, 1, 2);
             html += "</ul>";
             html += "</li>";
 
-            html += me.htmlCls.setHtmlCls.getLink('mn3_setThickness', 'Preferences');
+            html += me.htmlCls.setHtmlCls.getLink('mn3_setThickness', 'Preferences', undefined, 1);
 
-            if(!me.cfg.simplemenu) {
-                html += "<li>-</li>";
-                html += me.htmlCls.setHtmlCls.getLink('mn3_styleSave', 'Save Style');
-                html += me.htmlCls.setHtmlCls.getLink('mn3_styleApplySave', 'Apply Saved Style');
-            }
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+            html += me.htmlCls.setHtmlCls.getLink('mn3_styleSave', 'Save Style', undefined, 2);
+            html += me.htmlCls.setHtmlCls.getLink('mn3_styleApplySave', 'Apply Saved Style', undefined, 2);
 
-            html += "<li>-</li>";
+            html += me.htmlCls.setHtmlCls.getMenuSep();
 
-            html += "<li><span>Surface Type</span>";
+            //html += "<li><span>Surface Type</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn5_surfacewrap', 'Surface Type', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceVDW', 'Van der Waals');
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceVDWContext', 'VDW with Context');
-            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceMolecular', 'Molecular Surface');
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceMolecularContext', 'MS with Context');
-            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceSAS', 'Solvent Accessible');
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceSASContext', 'SA with Context');
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceVDW', 'Van der Waals', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceVDWContext', 'VDW with Context', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceMolecular', 'Molecular Surface', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceMolecularContext', 'MS with Context', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceSAS', 'Solvent Accessible', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_surface', 'mn5_surfaceSASContext', 'SA with Context', undefined, undefined, 2);
             html += "</ul>";
             html += "</li>";
 
-            html += me.htmlCls.setHtmlCls.getLink('mn5_surfaceNo', 'Remove Surface');
+            html += me.htmlCls.setHtmlCls.getLink('mn5_surfaceNo', 'Remove Surface', 1, 1);
 
-            html += "<li><span>Surface Opacity</span>";
+            //html += "<li><span>Surface Opacity</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn5_surfaceop', 'Surface Opacity', undefined, 1, 1);
             html += "<ul>";
 
-            html += "<li><span>Fast Transparency</span>";
+            //html += "<li><span>Fast Transparency</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn5_surfaceopfast', 'Fast Transparency', undefined, 1, 2);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn5_opacity', 'mn5_opacity10', '1.0', true);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_opacity', 'mn5_opacity10', '1.0', true, 1, 3);
 
             for(let i = 9; i > 0; --i) {
-                html += me.htmlCls.setHtmlCls.getRadio('mn5_opacity', 'mn5_opacity0' + i, '0.' + i);
+                html += me.htmlCls.setHtmlCls.getRadio('mn5_opacity', 'mn5_opacity0' + i, '0.' + i, 1, 3);
             }
             html += "</ul>";
             html += "</li>";
 
-            html += "<li><span>Slow Transparency</span>";
+            //html += "<li><span>Slow Transparency</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn5_surfaceopslow', 'Slow Transparency', undefined, undefined, 2);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn5_opacityslow', 'mn5_opacityslow10', '1.0', true);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_opacityslow', 'mn5_opacityslow10', '1.0', true, undefined, 3);
 
             for(let i = 9; i > 0; --i) {
-                html += me.htmlCls.setHtmlCls.getRadio('mn5_opacityslow', 'mn5_opacityslow0' + i, '0.' + i);
+                html += me.htmlCls.setHtmlCls.getRadio('mn5_opacityslow', 'mn5_opacityslow0' + i, '0.' + i, undefined, undefined, 3);
             }
             html += "</ul>";
             html += "</li>";
 
             html += "</ul>"; // end of Surface Opacity
 
-            html += "<li><span>Surface Wireframe</span>";
+            //html += "<li><span>Surface Wireframe</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn5_wireframewrap', 'Surface Wireframe', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn5_wireframe', 'mn5_wireframeYes', 'Yes');
-            html += me.htmlCls.setHtmlCls.getRadio('mn5_wireframe', 'mn5_wireframeNo', 'No', true);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_wireframe', 'mn5_wireframeYes', 'Yes', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn5_wireframe', 'mn5_wireframeNo', 'No', true, 1, 2);
             html += "</ul>";
             html += "</li>";
 
             if(me.cfg.cid === undefined && me.cfg.align === undefined && me.cfg.chainalign === undefined && me.cfg.mmdbaf === undefined) {
-                if(!me.cfg.simplemenu) {
-                    html += "<li>-</li>";
+                html += me.htmlCls.setHtmlCls.getMenuSep();
 
-                    html += "<li id='" + me.pre + "mapWrapper1'><span>Electron Density</span>";
+                //html += "<li id='" + me.pre + "mapWrapper1'><span>Electron Density</span>";
+                //html += me.htmlCls.setHtmlCls.getMenuText('mapWrapper1', 'Electron Density', undefined, undefined, 1);
+                html += me.htmlCls.setHtmlCls.getLinkWrapper2('mn5_map', 'Electron Density', 'mapWrapper1', undefined, 1);
+
+                html += "<ul>";
+                html += me.htmlCls.setHtmlCls.getRadio('mn5_elecmap', 'mn5_elecmap2fofc', '2Fo-Fc Map', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn5_elecmap', 'mn5_elecmapfofc', 'Fo-Fc Map', undefined, undefined, 2);
+                html += "</ul>";
+                html += "</li>";
+
+                html += me.htmlCls.setHtmlCls.getLinkWrapper('mn5_elecmapNo', 'Remove Map', 'mapWrapper2', undefined, 1);
+
+                //html += "<li id='" + me.pre + "mapWrapper3'><span>Map Wireframe</span>";
+                //html += me.htmlCls.setHtmlCls.getMenuText('mapWrapper3', 'Map Wireframe', undefined, undefined, 1);
+                html += me.htmlCls.setHtmlCls.getLinkWrapper2('mn5_map3', 'Map Wireframe', 'mapWrapper3', undefined, 1);
+                
+                html += "<ul>";
+                html += me.htmlCls.setHtmlCls.getRadio('mn5_mapwireframe', 'mn5_mapwireframeYes', 'Yes', true, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn5_mapwireframe', 'mn5_mapwireframeNo', 'No', undefined, undefined, 2);
+                html += "</ul>";
+                html += "</li>";
+
+                if(me.cfg.mmtfid === undefined) {
+                    //html += me.htmlCls.setHtmlCls.getMenuSep();
+
+                    html += me.htmlCls.setHtmlCls.getLinkWrapper('mn5_emmap', 'EM Density Map', 'emmapWrapper1', undefined, 1);
+                    html += me.htmlCls.setHtmlCls.getLinkWrapper('mn5_emmapNo', 'Remove EM Map', 'emmapWrapper2', undefined, 1);
+
+                    //html += "<li id='" + me.pre + "emmapWrapper3'><span>EM Map Wireframe</span>";
+                    //html += me.htmlCls.setHtmlCls.getMenuText('emmapWrapper3', 'EM Map Wireframe', undefined, undefined, 1);
+                    html += me.htmlCls.setHtmlCls.getLinkWrapper2('mn5_emmap3', 'EM Map Wireframe', 'emmapWrapper3', undefined, 1);
                     html += "<ul>";
-                    html += me.htmlCls.setHtmlCls.getRadio('mn5_elecmap', 'mn5_elecmap2fofc', '2Fo-Fc Map');
-                    html += me.htmlCls.setHtmlCls.getRadio('mn5_elecmap', 'mn5_elecmapfofc', 'Fo-Fc Map');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn5_emmapwireframe', 'mn5_emmapwireframeYes', 'Yes', true, undefined, 2);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn5_emmapwireframe', 'mn5_emmapwireframeNo', 'No', undefined, undefined, 2);
                     html += "</ul>";
                     html += "</li>";
-
-                    html += me.htmlCls.setHtmlCls.getLinkWrapper('mn5_elecmapNo', 'Remove Map', 'mapWrapper2');
-
-                    html += "<li id='" + me.pre + "mapWrapper3'><span>Map Wireframe</span>";
-                    html += "<ul>";
-                    html += me.htmlCls.setHtmlCls.getRadio('mn5_mapwireframe', 'mn5_mapwireframeYes', 'Yes', true);
-                    html += me.htmlCls.setHtmlCls.getRadio('mn5_mapwireframe', 'mn5_mapwireframeNo', 'No');
-                    html += "</ul>";
-                    html += "</li>";
-
-                    if(me.cfg.mmtfid === undefined) {
-                        //html += "<li>-</li>";
-
-                        html += me.htmlCls.setHtmlCls.getLinkWrapper('mn5_emmap', 'EM Density Map', 'emmapWrapper1');
-                        html += me.htmlCls.setHtmlCls.getLinkWrapper('mn5_emmapNo', 'Remove EM Map', 'emmapWrapper2');
-
-                        html += "<li id='" + me.pre + "emmapWrapper3'><span>EM Map Wireframe</span>";
-                        html += "<ul>";
-                        html += me.htmlCls.setHtmlCls.getRadio('mn5_emmapwireframe', 'mn5_emmapwireframeYes', 'Yes', true);
-                        html += me.htmlCls.setHtmlCls.getRadio('mn5_emmapwireframe', 'mn5_emmapwireframeNo', 'No');
-                        html += "</ul>";
-                        html += "</li>";
-                    }
                 }
             }
 
-            html += "<li>-</li>";
+            html += me.htmlCls.setHtmlCls.getMenuSep();
 
-            html += "<li><span>Background</span>";
+            //html += "<li><span>Background</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_bkgdwrap', 'Background', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdTransparent', 'Transparent');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdBlack', 'Black', true);
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdGrey', 'Gray');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdWhite', 'White');
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdTransparent', 'Transparent', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdBlack', 'Black', true, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdGrey', 'Gray', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_bkgd', 'mn6_bkgdWhite', 'White', undefined, 1, 2);
             html += "</ul>";
             html += "</li>";
 
-            if(!me.cfg.simplemenu) {
-                html += "<li><span>Dialog Color</span>";
-                html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_theme', 'mn6_themeBlue', 'Blue', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_theme', 'mn6_themeOrange', 'Orange');
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_theme', 'mn6_themeBlack', 'Black');
-                html += "</ul>";
-                html += "</li>";
-            }
-
-    //        html += "<li><span>Two-color Helix</span>";
-    //        html += "<ul>";
-    //        html += me.htmlCls.setHtmlCls.getRadio('mn6_doublecolor', 'mn6_doublecolorYes', 'Yes');
-    //        html += me.htmlCls.setHtmlCls.getRadio('mn6_doublecolor', 'mn6_doublecolorNo', 'No', true);
-    //        html += "</ul>";
-    //        html += "</li>";
-
+            html += "<li><span>Dialog Color</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_themewrap', 'Dialog Color', undefined, undefined, 1);
+            html += "<ul>";
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_theme', 'mn6_themeBlue', 'Blue', true, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_theme', 'mn6_themeOrange', 'Orange', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_theme', 'mn6_themeBlack', 'Black', undefined, undefined, 2);
+            html += "</ul>";
+            html += "</li>";
 
             html += "<li><br/></li>";
 
@@ -57600,316 +58802,309 @@ var icn3d = (function (exports) {
 
             html += "<ul class='icn3d-mn-item'>";
 
-            html += "<li><span style='padding-left:1.5em!important;'>Unicolor</span>";
+            //html += "<li><span style='padding-left:1.5em!important;'>Unicolor</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn4_clrwrap', 'Unicolor', 'icn3d-menupd', 1, 1);
             html += "<ul>";
 
-            html += "<li><span>Red</span>";
+            //html += "<li><span>Red</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrRedwrap', 'Red', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRed', 'Red');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed1', 'Red', 'F00');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed2', 'Indian Red', 'CD5C5C');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed3', 'Light Coral', 'F08080');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed4', 'Salmon', 'FA8072');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed5', 'Dark Salmon', 'E9967A');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed6', 'Light Salmon', 'FFA07A');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed7', 'Crimson', 'DC143C');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed8', 'Fire Brick', 'B22222');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrRed9', 'Dark Red', '8B0000');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed1', 'Red', 'F00', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed2', 'Indian Red', 'CD5C5C', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed3', 'Light Coral', 'F08080', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed4', 'Salmon', 'FA8072', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed5', 'Dark Salmon', 'E9967A', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed6', 'Light Salmon', 'FFA07A', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed7', 'Crimson', 'DC143C', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed8', 'Fire Brick', 'B22222', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrRed9', 'Dark Red', '8B0000', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Pink</span>";
+            //html += "<li><span>Pink</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrPinkwrap', 'Pink', undefined, 1, 2);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrPink1', 'Pink', 'FFC0CB');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrPink2', 'Light Pink', 'FFB6C1');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrPink3', 'Hot Pink', 'FF69B4');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrPink4', 'Deep Pink', 'FF1493');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrPink5', 'Medium Violet Red', 'C71585');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrPink6', 'Pale Violet Red', 'DB7093');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrPink1', 'Pink', 'FFC0CB', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrPink2', 'Light Pink', 'FFB6C1', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrPink3', 'Hot Pink', 'FF69B4', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrPink4', 'Deep Pink', 'FF1493', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrPink5', 'Medium Violet Red', 'C71585', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrPink6', 'Pale Violet Red', 'DB7093', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Orange</span>";
+            //html += "<li><span>Orange</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrOrangewrap', 'Orange', undefined, 1, 2);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrOran1', 'Orange', 'FFA500');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrOran2', 'Dark Orange', 'FF8C00');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrOran3', 'Orange Red', 'FF4500');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrOran4', 'Tomato', 'FF6347');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrOran5', 'Coral', 'FF7F50');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrOran6', 'Light Salmon', 'FFA07A');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrOran1', 'Orange', 'FFA500', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrOran2', 'Dark Orange', 'FF8C00', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrOran3', 'Orange Red', 'FF4500', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrOran4', 'Tomato', 'FF6347', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrOran5', 'Coral', 'FF7F50', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrOran6', 'Light Salmon', 'FFA07A', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Yellow</span>";
+            //html += "<li><span>Yellow</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrYellowwrap', 'Yellow', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrYllw', 'Yellow');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw1', 'Yellow', 'FF0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw2', 'Gold', 'FFD700');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw3', 'Light Yellow', 'FFFFE0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw4', 'Lemon Chiffon', 'FFFACD');
-            //html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw5', 'Light Golden Rod Yellow', 'FAFAD2');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw5', 'Light Golden Rod', 'FAFAD2');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw6', 'Papaya Whip', 'FFEFD5');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw7', 'Moccasin', 'FFE4B5');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw8', 'Peach Puff', 'FFDAB9');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw9', 'Pale Golden Rod', 'EEE8AA');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw10', 'Khaki', 'F0E68C');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrYllw11', 'Dark Khaki', 'BDB76B');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw1', 'Yellow', 'FF0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw2', 'Gold', 'FFD700', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw3', 'Light Yellow', 'FFFFE0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw4', 'Lemon Chiffon', 'FFFACD', undefined, 1, 3);
+            //html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw5', 'Light Golden Rod Yellow', 'FAFAD2', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw5', 'Light Golden Rod', 'FAFAD2', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw6', 'Papaya Whip', 'FFEFD5', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw7', 'Moccasin', 'FFE4B5', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw8', 'Peach Puff', 'FFDAB9', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw9', 'Pale Golden Rod', 'EEE8AA', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw10', 'Khaki', 'F0E68C', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrYllw11', 'Dark Khaki', 'BDB76B', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Magenta</span>";
+            //html += "<li><span>Magenta</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrMagentawrap', 'Magenta', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrMgnt', 'Magenta');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt1', 'Magenta', 'F0F');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt2', 'Orchid', 'DA70D6');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt3', 'Violet', 'EE82EE');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt4', 'Plum', 'DDA0DD');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt5', 'Thistle', 'D8BFD8');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt6', 'Lavender', 'E6E6FA');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt7', 'Medium Orchid', 'BA55D3');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt8', 'Medium Purple', '9370DB');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt9', 'Rebecca Purple', '663399');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt10', 'Blue Violet', '8A2BE2');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt11', 'Dark Violet', '9400D3');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt12', 'Dark Orchid', '9932CC');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt13', 'Dark Magenta', '8B008B');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt14', 'Purple', '800080');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt15', 'Indigo', '4B0082');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt16', 'Slat Blue', '6A5ACD');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt17', 'Dark Slate Blue', '483D8B');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrMgnt18', 'Medium Slat Blue', '6A5ACD');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt1', 'Magenta', 'F0F', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt2', 'Orchid', 'DA70D6', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt3', 'Violet', 'EE82EE', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt4', 'Plum', 'DDA0DD', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt5', 'Thistle', 'D8BFD8', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt6', 'Lavender', 'E6E6FA', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt7', 'Medium Orchid', 'BA55D3', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt8', 'Medium Purple', '9370DB', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt9', 'Rebecca Purple', '663399', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt10', 'Blue Violet', '8A2BE2', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt11', 'Dark Violet', '9400D3', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt12', 'Dark Orchid', '9932CC', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt13', 'Dark Magenta', '8B008B', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt14', 'Purple', '800080', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt15', 'Indigo', '4B0082', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt16', 'Slat Blue', '6A5ACD', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt17', 'Dark Slate Blue', '483D8B', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrMgnt18', 'Medium Slat Blue', '6A5ACD', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Green</span>";
+            //html += "<li><span>Green</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrGreenwrap', 'Green', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrGrn', 'Green');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn1', 'Green', '0F0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn2', 'Dark Green', '006400');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn3', 'Yellow Green', '9ACD32');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn4', 'Olive Drab', '6B8E23');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn5', 'Olive', '808000');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn6', 'Dark Olive Green', '556B2F');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn7', 'Medium Aquamarine', '66CDAA');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn8', 'Dark Sea Green', '8FBC8B');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn9', 'Lignt Sea Green', '20B2AA');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn10', 'Dark Cyan', '008B8B');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn11', 'Teal', '008080');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn12', 'Forest Green', '228B22');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn13', 'Sea Green', '2E8B57');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn14', 'Medium Sea Green', '3CB371');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn15', 'Spring Green', '00FF7F');
-            //html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn16', 'Medium Spring Green', '00FA9A');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn16', 'Medium Spring', '00FA9A');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn17', 'Light Green', '90EE90');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn18', 'Pale Green', '98FB98');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn19', 'Lime Green', '32CD32');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn20', 'Lawn Green', '7CFC00');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn21', 'Chartreuse', '7FFF00');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGrn22', 'Green Yellow', 'ADFF2F');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn1', 'Green', '0F0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn2', 'Dark Green', '006400', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn3', 'Yellow Green', '9ACD32', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn4', 'Olive Drab', '6B8E23', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn5', 'Olive', '808000', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn6', 'Dark Olive Green', '556B2F', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn7', 'Medium Aquamarine', '66CDAA', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn8', 'Dark Sea Green', '8FBC8B', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn9', 'Lignt Sea Green', '20B2AA', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn10', 'Dark Cyan', '008B8B', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn11', 'Teal', '008080', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn12', 'Forest Green', '228B22', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn13', 'Sea Green', '2E8B57', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn14', 'Medium Sea Green', '3CB371', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn15', 'Spring Green', '00FF7F', undefined, 1, 3);
+            //html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn16', 'Medium Spring Green', '00FA9A', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn16', 'Medium Spring', '00FA9A', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn17', 'Light Green', '90EE90', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn18', 'Pale Green', '98FB98', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn19', 'Lime Green', '32CD32', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn20', 'Lawn Green', '7CFC00', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn21', 'Chartreuse', '7FFF00', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGrn22', 'Green Yellow', 'ADFF2F', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Cyan</span>";
+            //html += "<li><span>Cyan</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrCyanwrap', 'Cyan', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrCyan', 'Cyan');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrCyan1', 'Cyan', '0FF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrCyan2', 'Light Cyan', 'E0FFFF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrCyan3', 'Pale Turquoise', 'AFEEEE');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrCyan4', 'Aquamarine', '7FFFD4');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrCyan5', 'Turquoise', '40E0D0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrCyan6', 'Medium Turquoise', '48D1CC');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrCyan7', 'Dark Turquoise', '00CED1');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrCyan1', 'Cyan', '0FF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrCyan2', 'Light Cyan', 'E0FFFF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrCyan3', 'Pale Turquoise', 'AFEEEE', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrCyan4', 'Aquamarine', '7FFFD4', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrCyan5', 'Turquoise', '40E0D0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrCyan6', 'Medium Turquoise', '48D1CC', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrCyan7', 'Dark Turquoise', '00CED1', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Blue</span>";
+            //html += "<li><span>Blue</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrBluewrap', 'Blue', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrBlue', 'Blue');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue1', 'Blue', '00F');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue2', 'Medium Blue', '0000CD');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue3', 'Dark Blue', '00008B');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue4', 'Navy', '000080');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue5', 'Midnight Blue', '191970');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue6', 'Royal Blue', '4169E1');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue7', 'Medium Slate Blue', '7B68EE');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue8', 'Corn Flower Blue', '6495ED');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue9', 'Dodger Blue', '1E90FF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue10', 'Deep Sky Blue', '00BFFF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue11', 'Light Sky Blue', '87CEFA');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue12', 'Sky Blue', '87CEEB');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue13', 'Light Blue', 'ADD8E6');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue14', 'Powder Blue', 'B0E0E6');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue15', 'Light Steel Blue', 'B0C4DE');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue16', 'Steel Blue', '4682B4');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBlue17', 'Cadet Blue', '5F9EA0');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue1', 'Blue', '00F', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue2', 'Medium Blue', '0000CD', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue3', 'Dark Blue', '00008B', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue4', 'Navy', '000080', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue5', 'Midnight Blue', '191970', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue6', 'Royal Blue', '4169E1', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue7', 'Medium Slate Blue', '7B68EE', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue8', 'Corn Flower Blue', '6495ED', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue9', 'Dodger Blue', '1E90FF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue10', 'Deep Sky Blue', '00BFFF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue11', 'Light Sky Blue', '87CEFA', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue12', 'Sky Blue', '87CEEB', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue13', 'Light Blue', 'ADD8E6', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue14', 'Powder Blue', 'B0E0E6', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue15', 'Light Steel Blue', 'B0C4DE', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue16', 'Steel Blue', '4682B4', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBlue17', 'Cadet Blue', '5F9EA0', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Brown</span>";
+            //html += "<li><span>Brown</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrBrownwrap', 'Brown', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrBrown', 'Brown');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown1', 'Brown', 'A52A2A');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown2', 'Maroon', '800000');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown3', 'Sienna', 'A0522D');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown4', 'Saddle Brown', '8B4513');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown5', 'Chocolate', 'D2691E');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown6', 'Peru', 'CD853F');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown7', 'Dark Golden Rod', 'B8860B');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown8', 'Golden Rod', 'DAA520');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown9', 'Sandy Brown', 'F4A460');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown10', 'Rosy Brown', 'BC8F8F');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown11', 'Tan', 'D2B48C');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown12', 'Burlywood', 'DEB887');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown13', 'Wheat', 'F5DEB3');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown14', 'Navajo White', 'FFDEAD');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown15', 'Bisque', 'FFE4C4');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown16', 'Blanched Almond', 'FFEBCD');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrBrown17', 'Corn Silk', 'FFF8DC');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown1', 'Brown', 'A52A2A', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown2', 'Maroon', '800000', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown3', 'Sienna', 'A0522D', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown4', 'Saddle Brown', '8B4513', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown5', 'Chocolate', 'D2691E', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown6', 'Peru', 'CD853F', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown7', 'Dark Golden Rod', 'B8860B', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown8', 'Golden Rod', 'DAA520', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown9', 'Sandy Brown', 'F4A460', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown10', 'Rosy Brown', 'BC8F8F', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown11', 'Tan', 'D2B48C', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown12', 'Burlywood', 'DEB887', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown13', 'Wheat', 'F5DEB3', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown14', 'Navajo White', 'FFDEAD', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown15', 'Bisque', 'FFE4C4', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown16', 'Blanched Almond', 'FFEBCD', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrBrown17', 'Corn Silk', 'FFF8DC', undefined, 1, 3);
             html += "</ul>";
 
             html += "<li><span>White</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrWhitewrap', 'White', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrWhite', 'White');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite1', 'White', 'FFF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite2', 'Snow', 'FFFAFA');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite3', 'Honey Dew', 'F0FFF0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite4', 'Mint Cream', 'F5FFFA');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite5', 'Azure', 'F0FFFF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite6', 'Alice Blue', 'F0F8FF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite7', 'Ghost White', 'F8F8FF');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite8', 'White Smoke', 'F5F5F5');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite9', 'Sea Shell', 'FFF5EE');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite10', 'Beige', 'F5F5DC');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite11', 'Old Lace', 'FDF5E6');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite12', 'Floral White', 'FFFAF0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite13', 'Ivory', 'FFFFF0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite14', 'Antique White', 'FAEBD7');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite15', 'Linen', 'FAF0E6');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite16', 'Lavenderblush', 'FFF0F5');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrWhite17', 'Misty Rose', 'FFE4E1');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite1', 'White', 'FFF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite2', 'Snow', 'FFFAFA', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite3', 'Honey Dew', 'F0FFF0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite4', 'Mint Cream', 'F5FFFA', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite5', 'Azure', 'F0FFFF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite6', 'Alice Blue', 'F0F8FF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite7', 'Ghost White', 'F8F8FF', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite8', 'White Smoke', 'F5F5F5', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite9', 'Sea Shell', 'FFF5EE', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite10', 'Beige', 'F5F5DC', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite11', 'Old Lace', 'FDF5E6', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite12', 'Floral White', 'FFFAF0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite13', 'Ivory', 'FFFFF0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite14', 'Antique White', 'FAEBD7', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite15', 'Linen', 'FAF0E6', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite16', 'Lavenderblush', 'FFF0F5', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrWhite17', 'Misty Rose', 'FFE4E1', undefined, 1, 3);
             html += "</ul>";
 
-            html += "<li><span>Gray</span>";
+            //html += "<li><span>Gray</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('uniclrGraywrap', 'Gray', undefined, 1, 2);
             html += "<ul>";
-            //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrGray', 'Gray');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray1', 'Gray', '808080');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray2', 'Dim Gray', '696969');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray3', 'Light Slate Gray', '778899');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray4', 'Slate Gray', '708090');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray5', 'Dark Slate Gray', '2F4F4F');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray6', 'Black', '000000');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray7', 'Dark Gray', 'A9A9A9');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray8', 'Silver', 'C0C0C0');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray9', 'Light Gray', 'D3D3D3');
-            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'mn4_clrGray10', 'Gainsboro', 'DCDCDC');
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray1', 'Gray', '808080', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray2', 'Dim Gray', '696969', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray3', 'Light Slate Gray', '778899', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray4', 'Slate Gray', '708090', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray5', 'Dark Slate Gray', '2F4F4F', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray6', 'Black', '000000', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray7', 'Dark Gray', 'A9A9A9', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray8', 'Silver', 'C0C0C0', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray9', 'Light Gray', 'D3D3D3', undefined, 1, 3);
+            html += me.htmlCls.setHtmlCls.getRadioColor('mn4_clr', 'uniclrGray10', 'Gainsboro', 'DCDCDC', undefined, 1, 3);
             html += "</ul>";
 
             html += "</ul>";
 
-            if(!me.cfg.simplemenu) {
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrCustom', 'Color Picker');
-                html += "<li>-</li>";
-            }
+            html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrCustom', 'Color Picker', undefined, undefined, 1);
+            html += me.htmlCls.setHtmlCls.getMenuSep();
 
             if(me.cfg.cid === undefined) {
                 //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRainbow', 'Rainbow (R-V)');
-                html += "<li><span style='padding-left:1.5em!important;'>Rainbow (R-V)</span>";
+                //html += "<li><span style='padding-left:1.5em!important;'>Rainbow (R-V)</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn4_clrRainbowwrap', 'Rainbow (R-V)', 'icn3d-menupd', 1, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRainbow', 'for Selection');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRainbowChain', 'for Chains');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRainbowSets', 'for Sets');
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRainbow', 'for Selection', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRainbowChain', 'for Chains', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrRainbowSets', 'for Sets', undefined, undefined, 2);
                 html += "</ul>";
 
-                if(!me.cfg.simplemenu) {
-                    //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSpectrum', 'Spectrum (V-R)');
-                    html += "<li><span style='padding-left:1.5em!important;'>Spectrum (V-R)</span>";
-                    html += "<ul>";
-                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSpectrum', 'for Selection');
-                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSpectrumChain', 'for Chains');
-                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSpectrumSets', 'for Sets');
-                    html += "</ul>";
-                }
-
-                html += "<li><span style='padding-left:1.5em!important;'>Secondary</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn4_clrSpectrumwrap', 'Spectrum (V-R)', 'icn3d-menupd', 1, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSSGreen', 'Sheet in Green');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSSYellow', 'Sheet in Yellow');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSSSpectrum', 'Spectrum');
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSpectrum', 'for Selection', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSpectrumChain', 'for Chains', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSpectrumSets', 'for Sets', undefined, undefined, 2);
                 html += "</ul>";
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrCharge', 'Charge');
-
-    //            if(!me.cfg.notebook && !me.cfg.hidelicense) {
-    //                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn1_delphi2', 'DelPhi<br><span style="padding-left:1.5em;">Potential ' + me.htmlCls.licenseStr + '</span>');
-    //            }
-
-                //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrHydrophobic', 'Wimley-White<br><span style="padding-left:1.5em;">Hydrophobicity</span>');
-
-                html += "<li><span style='padding-left:1.5em!important;'>Hydrophobicity</span>";
+                //html += "<li><span style='padding-left:1.5em!important;'>Secondary</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn4_clrSSwrap', 'Secondary', 'icn3d-menupd', 1, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrNormalizedHP', 'Normalized');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrHydrophobic', 'Wimley-White');
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSSGreen', 'Sheet in Green', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSSYellow', 'Sheet in Yellow', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrSSSpectrum', 'Spectrum', undefined, undefined, 2);
                 html += "</ul>";
 
-                html += "<li><span style='padding-left:1.5em!important;'>B-factor</span>";
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrCharge', 'Charge', undefined, 1, 1);
+
+                //html += "<li><span style='padding-left:1.5em!important;'>Hydrophobicity</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn4_hydrophobicwrap', 'Hydrophobicity', 'icn3d-menupd', 1, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrBfactor', 'Original');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrBfactorNorm', 'Percentile');
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrNormalizedHP', 'Normalized', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrHydrophobic', 'Wimley-White', undefined, undefined, 2);
                 html += "</ul>";
 
-                if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrArea', 'Solvent<br><span style="padding-left:1.5em;">Accessibility</span>');
+                //html += "<li><span style='padding-left:1.5em!important;'>B-factor</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn4_clrBfactorwrap', 'B-factor', 'icn3d-menupd', 1, 1);
+                html += "<ul>";
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrBfactor', 'Original', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrBfactorNorm', 'Percentile', undefined, 1, 2);
+                html += "</ul>";
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrStructure', 'Structure');
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrArea', 'Solvent<br><span style="padding-left:1.5em;">Accessibility</span>', undefined, undefined, 1);
+
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrStructure', 'Structure', undefined, 1, 1);
 
                 if(me.cfg.align !== undefined || me.cfg.chainalign !== undefined || me.cfg.blast_rep_id !== undefined) {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrChain', 'Chain');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrChain', 'Chain', undefined, 1, 1);
                 }
                 else {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrChain', 'Chain', true);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrChain', 'Chain', true, 1, 1);
                 }
 
                 //if(me.cfg.mmdbid !== undefined || me.cfg.gi !== undefined) {
-                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrdomain', '3D Domain');
+                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrdomain', '3D Domain', undefined, undefined, 1);
                 //}
 
                 if(me.cfg.cid === undefined) {
-                    if(!me.cfg.simplemenu) {
-                        html += "<li><span style='padding-left:1.5em!important;'>Defined Sets</span>";
-                        html += "<ul>";
-                        html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrsets', 'Rainbow for Selected Sets<br>in "Analysis > Defined Sets"');
-                        html += "</ul>";
-                    }
+                    //html += "<li><span style='padding-left:1.5em!important;'>Defined Sets</span>";
+                    html += me.htmlCls.setHtmlCls.getMenuText('mn4_clrsetswrap', 'Defined Sets', 'icn3d-menupd', undefined, 1);
+                    html += "<ul>";
+                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrsets', 'Rainbow for Selected Sets<br><span style="padding-left:1.5em;">in "Analysis > Defined Sets"</span>', undefined, undefined, 2);
+                    html += "</ul>";
+                    html += "</li>";
                 }
 
-                //html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrResidue', 'Residue');
-
-                html += "<li><span style='padding-left:1.5em!important;'>Residue</span>";
+                //html += "<li><span style='padding-left:1.5em!important;'>Residue</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn4_clrResiduewrap', 'Residue', 'icn3d-menupd', 1, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrResidue', 'Default');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrResidueCustom', 'Custom');
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrResidue', 'Default', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrResidueCustom', 'Custom', undefined, undefined, 2);
                 html += "</ul>";
 
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrAtom', 'Atom');
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrAtom', 'Atom', undefined, 1, 1);
 
                 if(me.cfg.align !== undefined || me.cfg.chainalign !== undefined) {
-                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrIdentity', 'Identity', true);
-                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrConserved', 'Conservation');
+                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrIdentity', 'Identity', true, undefined, 2);
+                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrConserved', 'Conservation', undefined, undefined, 2);
                 }
                 else if(me.cfg.blast_rep_id !== undefined) {
-                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrIdentity', 'Identity');
-                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrConserved', 'Conservation', true);
+                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrIdentity', 'Identity', undefined, undefined, 2);
+                  html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrConserved', 'Conservation', true, undefined, 2);
                 }
 
                 //if(me.cfg.afid) html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrConfidence', 'AF Confidence');
                 //if(!me.cfg.mmtfid && !me.cfg.pdbid && !me.cfg.opmid && !me.cfg.mmdbid && !me.cfg.gi && !me.cfg.uniprotid && !me.cfg.blast_rep_id && !me.cfg.cid && !me.cfg.mmcifid && !me.cfg.align && !me.cfg.chainalign) {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrConfidence', 'AlphaFold<br><span style="padding-left:1.5em;">Confidence</span>');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrConfidence', 'AlphaFold<br><span style="padding-left:1.5em;">Confidence</span>', undefined, 1, 1);
                 //}
             }
             else {
                 //if(!me.cfg.hidelicense) html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn1_delphi2', 'DelPhi<br><span style="padding-left:1.5em;">Potential ' + me.htmlCls.licenseStr + '</span>');
-                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrAtom', 'Atom', true);
+                html += me.htmlCls.setHtmlCls.getRadio('mn4_clr', 'mn4_clrAtom', 'Atom', true, 1, 1);
             }
 
-            if(!me.cfg.simplemenu) {
-                html += "<li>-</li>";
+            html += me.htmlCls.setHtmlCls.getMenuSep();
 
-                html += me.htmlCls.setHtmlCls.getLink('mn4_clrSave', 'Save Color');
-                html += me.htmlCls.setHtmlCls.getLink('mn4_clrApplySave', 'Apply Saved Color');
-            }
+            html += me.htmlCls.setHtmlCls.getLink('mn4_clrSave', 'Save Color', undefined, 1);
+            html += me.htmlCls.setHtmlCls.getLink('mn4_clrApplySave', 'Apply Saved Color', undefined, 1);
 
             html += "<li><br/></li>";
             html += "</ul>";
@@ -57945,197 +59140,211 @@ var icn3d = (function (exports) {
             html += "<ul class='icn3d-mn-item'>";
 
             if(me.cfg.cid === undefined) {
-                html += me.htmlCls.setHtmlCls.getLink('mn6_selectannotations', 'Seq. & Annotations ' + me.htmlCls.wifiStr);
+                html += me.htmlCls.setHtmlCls.getLink('mn6_selectannotations', 'Seq. & Annotations ' + me.htmlCls.wifiStr, 1, 1);
 
                 //if(me.cfg.align !== undefined || me.cfg.chainalign !== undefined) { // || ic.bRealign || ic.bSymd || ic.bInputfile) {
-                    html += me.htmlCls.setHtmlCls.getLink('mn2_alignment', 'Aligned Seq. ' + me.htmlCls.wifiStr);
+                    html += me.htmlCls.setHtmlCls.getLink('mn2_alignment', 'Aligned Seq. ' + me.htmlCls.wifiStr, undefined, 1);
                 //}
 
                 if(me.cfg.mmdbid !== undefined || me.cfg.gi !== undefined || me.cfg.blast_rep_id !== undefined || me.cfg.align !== undefined || me.cfg.chainalign !== undefined) {
-                  html += me.htmlCls.setHtmlCls.getLink('mn2_2ddgm', '2D Diagram ' + me.htmlCls.wifiStr);
+                  html += me.htmlCls.setHtmlCls.getLink('mn2_2ddgm', '2D Diagram ' + me.htmlCls.wifiStr, 1, 1);
                 }
 
-                html += "<li><span>2D Cartoon</span>";
+                //html += "<li><span>2D Cartoon</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('2dctnwrap', '2D Cartoon', undefined, undefined, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getLink('2dctn_chain', 'Chain Level');
-                html += me.htmlCls.setHtmlCls.getLink('2dctn_domain', 'Domain Level');
-                html += me.htmlCls.setHtmlCls.getLink('2dctn_secondary', 'Helix/Sheet Level');
+                html += me.htmlCls.setHtmlCls.getLink('2dctn_chain', 'Chain Level', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('2dctn_domain', 'Domain Level', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('2dctn_secondary', 'Helix/Sheet Level', undefined, 2);
                 html += "</ul>";
                 html += "</li>";
 
-                html += me.htmlCls.setHtmlCls.getLink('definedsets2', 'Defined Sets');
+                html += me.htmlCls.setHtmlCls.getLink('definedsets2', 'Defined Sets', 1, 1);
 
-                html += "<li>-</li>";
+                html += me.htmlCls.setHtmlCls.getMenuSep();
 
-                html += me.htmlCls.setHtmlCls.getLink('mn6_hbondsYes', 'Interactions');
+                html += me.htmlCls.setHtmlCls.getLink('mn6_hbondsYes', 'Interactions', 1, 1);
                 //html += me.htmlCls.setHtmlCls.getLink('mn6_hbondsNo', 'Remove H-Bonds <br>& Interactions');
 
-                if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn6_contactmap', 'Contact Map');
-    /*
-                html += "<li><span>Bring to Front</span>";
-                html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getLink('mn1_window_table', 'Interaction Table');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_window_linegraph', '2D Interaction Network');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_window_scatterplot', '2D Interaction Map');
-                html += me.htmlCls.setHtmlCls.getLink('mn1_window_graph', '2D Graph(Force-Directed)');
-                html += "</ul>";
-                html += "</li>";
-    */
+                html += me.htmlCls.setHtmlCls.getLink('mn6_contactmap', 'Contact Map', undefined, 1);
 
                 if(!me.cfg.notebook) {
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_mutation', 'Mutation ' + me.htmlCls.wifiStr);
+                    html += me.htmlCls.setHtmlCls.getLink('mn1_mutation', 'Mutation ' + me.htmlCls.wifiStr, 1, 1);
                 }
 
-                if(!me.cfg.simplemenu) html += "<li>-</li>";
+                //html += me.htmlCls.setHtmlCls.getMenuSep();
             }
 
             if(!me.cfg.notebook && !me.cfg.hidelicense) {
-                html += me.htmlCls.setHtmlCls.getLink('mn1_delphi', 'DelPhi Potential ' + me.htmlCls.licenseStr);
-                
-                if(!me.cfg.simplemenu) {
-                    html += "<li><span>Load PQR/Phi</span>";
+                //html += me.htmlCls.setHtmlCls.getLink('mn1_delphi', 'DelPhi Potential ' + me.htmlCls.licenseStr, 1, 1);
+                html += me.htmlCls.setHtmlCls.getMenuText('mn1_delphiwrap', 'DelPhi Potential', undefined, 1, 1);
+
+                html += "<ul>";       
+                    html += me.htmlCls.setHtmlCls.getLink('mn1_delphi', 'DelPhi Potential ' + me.htmlCls.licenseStr, 1, 2);    
+
+                    //html += "<li><span>Load PQR/Phi</span>";
+                    html += me.htmlCls.setHtmlCls.getMenuText('mn1_phiwrap', 'Load PQR/Phi', undefined, undefined, 2);
                     html += "<ul>";
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_phi', 'Local PQR/Phi/Cube File');
-                    html += me.htmlCls.setHtmlCls.getLink('mn1_phiurl', 'URL PQR/Phi/Cube File');
+                    html += me.htmlCls.setHtmlCls.getLink('mn1_phi', 'Local PQR/Phi/Cube File', undefined, 3);
+                    html += me.htmlCls.setHtmlCls.getLink('mn1_phiurl', 'URL PQR/Phi/Cube File', undefined, 3);
                     html += "</ul>";
-                    html += me.htmlCls.setHtmlCls.getLink('delphipqr', 'Download PQR');
-                }
+                    html += "</li>";
+                    html += me.htmlCls.setHtmlCls.getLink('delphipqr', 'Download PQR', undefined, 2);
+                html += "</ul>";
+                html += "</li>";
 
-                html += "<li>-</li>";
+                //html += me.htmlCls.setHtmlCls.getMenuSep();
             }
 
-            html += "<li><span>Distance</span>";
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+
+            //html += "<li><span>Distance</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_distancewrap', 'Distance', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distanceYes', 'between Two Atoms');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distTwoSets', 'between Two Sets');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distManySets', 'Among Many Sets');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distanceNo', 'Hide', true);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distanceYes', 'between Two Atoms', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distTwoSets', 'between Two Sets', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distManySets', 'Among Many Sets', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_distance', 'mn6_distanceNo', 'Hide', true, 1, 2);
             html += "</ul>";
             html += "</li>";
 
-            html += me.htmlCls.setHtmlCls.getLink('mn6_area', 'Surface Area');
+            html += me.htmlCls.setHtmlCls.getLink('mn6_area', 'Surface Area', 1, 1);
 
-            html += "<li><span>Label</span>";
+            //html += "<li><span>Label</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_addlabelwrap', 'Label', undefined, 1, 1);
             html += "<ul>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelYes', 'by Picking Atoms');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelSelection', 'per Selection');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelAtoms', 'per Atom');
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelElements', 'per Atom Element');
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelYes', 'by Picking Atoms', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelSelection', 'per Selection', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelAtoms', 'per Atom', undefined, undefined, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelElements', 'per Atom Element', undefined, 1, 2);
             if(me.cfg.cid === undefined) {
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelResidues', 'per Residue');
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelResnum', 'per Residue & Number');
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelChains', 'per Chain');
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelTermini', 'N- & C-Termini');
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelResidues', 'per Residue', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelResnum', 'per Residue & Number', undefined, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelChains', 'per Chain', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelTermini', 'N- & C-Termini', undefined, 1, 2);
             }
 
-            html += "<li>-</li>";
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_labelColor', 'Change Label Color', true);
-            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelNo', 'Remove', true);
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_labelColor', 'Change Label Color', undefined, 1, 2);
+            html += me.htmlCls.setHtmlCls.getRadio('mn6_addlabel', 'mn6_addlabelNo', 'Remove', true, 1, 2);
             html += "</ul>";
             html += "</li>";
 
-            html += "<li><span>Label Scale</span>";
+            //html += "<li><span>Label Scale</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('labelscalewrap', 'Label Scale', undefined, 1, 1);
             html += "<ul>";
 
             for(let i = 1; i <= 4; ++i) {
                 let twoi = 2 * i;
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_labelscale', 'mn6_labelscale0' + twoi, '0.' + twoi);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_labelscale', 'mn6_labelscale0' + twoi, '0.' + twoi, undefined, 1, 2);
             }
 
             for(let i = 1; i <= 5; ++i) {
                 if(i == 1) {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_labelscale', 'mn6_labelscale' + i + '0', i + '.0', true);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn6_labelscale', 'mn6_labelscale' + i + '0', i + '.0', true, 1, 2);
                 }
                 else {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_labelscale', 'mn6_labelscale' + i + '0', i + '.0');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn6_labelscale', 'mn6_labelscale' + i + '0', i + '.0', undefined, 1, 2);
                 }
             }
 
             html += "</ul>";
             html += "</li>";
 
-            html += "<li>-</li>";
+            html += me.htmlCls.setHtmlCls.getMenuSep();
 
             if(me.cfg.cid === undefined) {
-                if(!me.cfg.simplemenu) {
-                    html += "<li><span>Chem. Binding</span>";
-                    html += "<ul>";
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_chemicalbinding', 'mn6_chemicalbindingshow', 'Show');
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_chemicalbinding', 'mn6_chemicalbindinghide', 'Hide', true);
-                    html += "</ul>";
-                    html += "</li>";
-                }
-
-                html += "<li><span>Disulfide Bonds</span>";
+                //html += "<li><span>Chem. Binding</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn6_chemicalbindingwrap', 'Chem. Binding', undefined, undefined, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_ssbonds', 'mn6_ssbondsYes', 'Show', true);
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_ssbonds', 'mn6_ssbondsExport', 'Export Pairs');
-                html += me.htmlCls.setHtmlCls.getRadio('mn6_ssbonds', 'mn6_ssbondsNo', 'Hide');
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_chemicalbinding', 'mn6_chemicalbindingshow', 'Show', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_chemicalbinding', 'mn6_chemicalbindinghide', 'Hide', true, undefined, 2);
                 html += "</ul>";
                 html += "</li>";
 
-                if(!me.cfg.simplemenu) {
-                    html += "<li><span>Cross-Linkages</span>";
-                    html += "<ul>";
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_clbonds', 'mn6_clbondsYes', 'Show', true);
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_clbonds', 'mn6_clbondsExport', 'Export Pairs');
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_clbonds', 'mn6_clbondsNo', 'Hide');
-                    html += "</ul>";
-                    html += "</li>";
-                }
+                //html += "<li><span>Disulfide Bonds</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn6_ssbondswrap', 'Disulfide Bonds', undefined, 1, 1);
+                html += "<ul>";
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_ssbonds', 'mn6_ssbondsYes', 'Show', true, 1, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_ssbonds', 'mn6_ssbondsExport', 'Export Pairs', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_ssbonds', 'mn6_ssbondsNo', 'Hide', undefined, 1, 2);
+                html += "</ul>";
+                html += "</li>";
 
-                let bOnePdb = me.cfg.mmtfid !== undefined || me.cfg.pdbid !== undefined || me.cfg.opmid !== undefined || me.cfg.mmcifid !== undefined || me.cfg.mmdbid !== undefined || me.cfg.gi !== undefined || me.cfg.blast_rep_id !== undefined;
+                //html += "<li><span>Cross-Linkages</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn6_clbondswrap', 'Cross-Linkages', undefined, undefined, 1);
+                html += "<ul>";
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_clbonds', 'mn6_clbondsYes', 'Show', true, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_clbonds', 'mn6_clbondsExport', 'Export Pairs', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_clbonds', 'mn6_clbondsNo', 'Hide', undefined, undefined, 2);
+                html += "</ul>";
+                html += "</li>";
+
+                let bOnePdb = me.cfg.mmtfid !== undefined || me.cfg.pdbid !== undefined || me.cfg.opmid !== undefined || me.cfg.mmcifid !== undefined || me.cfg.mmdbid !== undefined || me.cfg.mmdbafid !== undefined || me.cfg.gi !== undefined || me.cfg.blast_rep_id !== undefined;
 
                 if(bOnePdb) {
-                  html += "<li id='" + me.pre + "assemblyWrapper'><span>Assembly</span>";
+                  //html += "<li id='" + me.pre + "assemblyWrapper'><span>Assembly</span>";
+                  html += me.htmlCls.setHtmlCls.getMenuText('assemblyWrapper', 'Assembly', undefined, 1, 1);
                   html += "<ul>";
 
                   if(!me.cfg.bu) {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyYes', 'Biological Assembly');
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyNo', 'Asymmetric Unit', true);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyYes', 'Biological Assembly', undefined, 1, 2);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyNo', 'Asymmetric Unit', true, 1, 2);
                   }
                   else {
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyYes', 'Biological Assembly', true);
-                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyNo', 'Asymmetric Unit');
+                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyYes', 'Biological Assembly', true, 1, 2);
+                    html += me.htmlCls.setHtmlCls.getRadio('mn6_assembly', 'mn6_assemblyNo', 'Asymmetric Unit', undefined, 1, 2);
                   }
 
                   html += "</ul>";
                   html += "</li>";
-
                 }
 
-                html += "<li><span>Symmetry</span>";
+                //html += "<li><span>Symmetry</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn6_symmetrywrap', 'Symmetry', undefined, undefined, 1);
+
                 html += "<ul>";
-                if(bOnePdb) html += me.htmlCls.setHtmlCls.getLink('mn6_symmetry', 'from PDB(precalculated) ' + me.htmlCls.wifiStr);
-                if(!me.cfg.simplemenu) {
-                    html += me.htmlCls.setHtmlCls.getLink('mn6_symd', 'from SymD(Dynamic) ' + me.htmlCls.wifiStr);
-                    html += me.htmlCls.setHtmlCls.getLink('mn6_clear_sym', 'Clear SymD Symmetry');
-                    html += me.htmlCls.setHtmlCls.getLink('mn6_axes_only', 'Show Axes Only');
-                }
+                if(bOnePdb) html += me.htmlCls.setHtmlCls.getLink('mn6_symmetry', 'from PDB(precalculated) ' + me.htmlCls.wifiStr, undefined, 2);
+
+                html += me.htmlCls.setHtmlCls.getLink('mn6_symd', 'from SymD(Dynamic) ' + me.htmlCls.wifiStr, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn6_clear_sym', 'Clear SymD Symmetry', undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn6_axes_only', 'Show Axes Only', undefined, 2);
+
                 html += "</ul>";
                 html += "</li>";
+    /*
+                html += me.htmlCls.setHtmlCls.getMenuText('mn6_igrefwrap', 'Ig Ref. Number', undefined, undefined, 1);
 
-                html += "<li>-</li>";
+                html += "<ul>";
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_igref', 'mn6_igrefYes', 'Show', undefined, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getRadio('mn6_igref', 'mn6_igrefNo', 'Hide', true, undefined, 2);
+                html += "</ul>";
+                html += "</li>";
+    */
+                html += me.htmlCls.setHtmlCls.getMenuSep();
             }
 
-            if(!me.cfg.simplemenu) html += me.htmlCls.setHtmlCls.getLink('mn6_yournote', 'Window Title');
+            html += me.htmlCls.setHtmlCls.getLink('mn6_yournote', 'Window Title', undefined, 1);
 
             if(me.cfg.cid !== undefined) {
-                html += "<li><span>Links</span>";
+                //html += "<li><span>Links</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn1_linkwrap', 'Links', undefined, undefined, 1);
+                
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getLink('mn1_link_structure', 'Compound Summary ' + me.htmlCls.wifiStr);
-                html += me.htmlCls.setHtmlCls.getLink('mn1_link_vast', 'Similar Compounds ' + me.htmlCls.wifiStr);
-                html += me.htmlCls.setHtmlCls.getLink('mn1_link_bind', 'Structures Bound ' + me.htmlCls.wifiStr);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_link_structure', 'Compound Summary ' + me.htmlCls.wifiStr, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_link_vast', 'Similar Compounds ' + me.htmlCls.wifiStr, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_link_bind', 'Structures Bound ' + me.htmlCls.wifiStr, undefined, 2);
                 html += "</ul>";
                 html += "</li>";
             }
             else {
-                html += "<li><span>Links</span>";
+                //html += "<li><span>Links</span>";
+                html += me.htmlCls.setHtmlCls.getMenuText('mn1_linkwrap', 'Links', undefined, undefined, 1);
                 html += "<ul>";
-                html += me.htmlCls.setHtmlCls.getLink('mn1_link_structure', 'Structure Summary ' + me.htmlCls.wifiStr);
-                html += me.htmlCls.setHtmlCls.getLink('mn1_link_vast', 'Similar Structures ' + me.htmlCls.wifiStr);
-                html += me.htmlCls.setHtmlCls.getLink('mn1_link_pubmed', 'Literature ' + me.htmlCls.wifiStr);
-                html += me.htmlCls.setHtmlCls.getLink('mn1_link_protein', 'Protein ' + me.htmlCls.wifiStr);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_link_structure', 'Structure Summary ' + me.htmlCls.wifiStr, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_link_vast', 'Similar Structures ' + me.htmlCls.wifiStr, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_link_pubmed', 'Literature ' + me.htmlCls.wifiStr, undefined, 2);
+                html += me.htmlCls.setHtmlCls.getLink('mn1_link_protein', 'Protein ' + me.htmlCls.wifiStr, undefined, 2);
                 //html += me.htmlCls.setHtmlCls.getLink('mn1_link_gene', 'Gene');
                 //html += me.htmlCls.setHtmlCls.getLink('mn1_link_chemicals', 'Chemicals');
                 html += "</ul>";
@@ -58174,55 +59383,77 @@ var icn3d = (function (exports) {
 
             let html = "";
 
-            let liStr = "<li><a href='";
-
             html += "<ul class='icn3d-mn-item'>";
 
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#about' target='_blank'>About iCn3D<span style='font-size:0.9em'> " + me.REVISION + "</span></a></li>";
+            //html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#about' target='_blank'>About iCn3D<span style='font-size:0.9em'> " + me.REVISION + "</span></a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('abouticn3d', me.htmlCls.baseUrl + "icn3d/icn3d.html#about", "About iCn3D<span style='font-size:0.9em'> " + me.REVISION + "</span>", 1, 1);
 
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#gallery' target='_blank'>Live Gallery " + me.htmlCls.wifiStr + "</a></li>";
+            //html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#gallery' target='_blank'>Live Gallery " + me.htmlCls.wifiStr + "</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('gallery', me.htmlCls.baseUrl + "icn3d/icn3d.html#gallery", "Live Gallery " + me.htmlCls.wifiStr, 1, 1);
+            //html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#videos' target='_blank'>iCn3D Videos</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('video', me.htmlCls.baseUrl + "icn3d/icn3d.html#videos", "iCn3D Videos", 1, 1);
 
-            html += "<li><span>Tutorial</span>";
+            //html += "<li><span>FAQ</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_faq', 'FAQ', undefined, 1, 1);
+
             html += "<ul>";
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#useicn3d' target='_blank'>Use iCn3D</a></li>";
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#videos' target='_blank'>iCn3D Videos</a></li>";
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#parameters' target='_blank'>URL Parameters</a></li>";
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#commands' target='_blank'>Commands</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_viewstru', me.htmlCls.baseUrl + "icn3d/icn3d.html#viewstru", "View structure", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_tfstru', me.htmlCls.baseUrl + "icn3d/icn3d.html#tfstru", "Transform Structure", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_selsubset', me.htmlCls.baseUrl + "icn3d/icn3d.html#selsubset", "Select Subsets", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_stylecolor', me.htmlCls.baseUrl + "icn3d/icn3d.html#changestylecolor", "Change Style/Color", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_savework', me.htmlCls.baseUrl + "icn3d/icn3d.html#saveview", "Save Work", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_showanno', me.htmlCls.baseUrl + "icn3d/icn3d.html#showanno", "Show Annotations", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_exportanno', me.htmlCls.baseUrl + "icn3d/icn3d.html#exportanno", "Export Annotations", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_interanal', me.htmlCls.baseUrl + "icn3d/icn3d.html#interanalysis", "Interaction Analysis", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_mutanal', me.htmlCls.baseUrl + "icn3d/icn3d.html#mutationanalysis", "Mutation Analysis", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_elecpot', me.htmlCls.baseUrl + "icn3d/icn3d.html#elecpot", "Electrostatic Pot.", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_simipdb', me.htmlCls.baseUrl + "icn3d/icn3d.html#simivast", "Similar PDB", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_simialphapdb', me.htmlCls.baseUrl + "icn3d/icn3d.html#simifoldseek", "Similar AlphaFold/PDB", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_alnstru', me.htmlCls.baseUrl + "icn3d/icn3d.html#alignmul", "Align Multiple Structures", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_batchanal', me.htmlCls.baseUrl + "icn3d/icn3d.html#batchanalysis", "Batch Analysis", 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('faq_embedicn3d', me.htmlCls.baseUrl + "icn3d/icn3d.html#embedicn3d", "Embed iCn3D", 1, 2);
             html += "</ul>";
             html += "</li>";
 
-            html += liStr + "https://www.ncbi.nlm.nih.gov/structure' target='_blank'>Search Structure " + me.htmlCls.wifiStr + "</a></li>";
-            html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#citing' target='_blank'>Citing iCn3D</a></li>";
+            //html += liStr + "https://www.ncbi.nlm.nih.gov/structure' target='_blank'>Search Structure " + me.htmlCls.wifiStr + "</a></li>";
+            //html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#citing' target='_blank'>Citing iCn3D</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('citing', me.htmlCls.baseUrl + "icn3d/icn3d.html#citing", "Citing iCn3D", undefined, 1);
 
-            html += "<li><span>Source Code</span>";
+            //html += "<li><span>Source Code</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_source', 'Source Code', undefined, 1, 1);
             html += "<ul>";
-            html += liStr + "https://github.com/ncbi/icn3d' target='_blank'>GitHub (browser) " + me.htmlCls.wifiStr + "</a></li>";
-            html += liStr + "https://www.npmjs.com/package/icn3d' target='_blank'>npm (Node.js) " + me.htmlCls.wifiStr + "</a></li>";
-            html += liStr + "https://pypi.org/project/icn3dpy' target='_blank'>Jupyter Notebook " + me.htmlCls.wifiStr + "</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('github', "https://github.com/ncbi/icn3d", "GitHub (browser) " + me.htmlCls.wifiStr, 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('npm', "https://www.npmjs.com/package/icn3d", "npm (Node.js) " + me.htmlCls.wifiStr, 1, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('notebook', "https://pypi.org/project/icn3dpy", "Jupyter Notebook " + me.htmlCls.wifiStr, 1, 2);
             html += "</ul>";
             html += "</li>";
 
-            if(!me.cfg.simplemenu) {
-                html += "<li><span>Develop</span>";
-                html += "<ul>";
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#HowToUse' target='_blank'>How to Embed</a></li>";
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#datastructure' target='_blank'>Data Structure</a></li>";
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#classstructure' target='_blank'>Class Structure</a></li>";
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#addclass' target='_blank'>Add New Classes</a></li>";
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#modifyfunction' target='_blank'>Modify Functions</a></li>";
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#restfulapi' target='_blank'>RESTful APIs</a></li>";
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#contributors' target='_blank'>Codeathon Contributors</a></li>";
-                html += "</ul>";
-                html += "</li>";
-            }
-
-            html += liStr + me.htmlCls.baseUrl + "icn3d/docs/icn3d_help.html' target='_blank'>Help Doc " + me.htmlCls.wifiStr + "</a></li>";
-
-            html += "<li>-</li>";
-
-            html += "<li><span>Transform Hints</span>";
+            //html += "<li><span>Develop</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_develop', 'Develop', undefined, undefined, 1);
             html += "<ul>";
-            html += "<li><span>Rotate</span>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_embedicn3d2', me.htmlCls.baseUrl + "icn3d/icn3d.html#HowToUse", "Embed iCn3D", undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_urlpara', me.htmlCls.baseUrl + "icn3d/icn3d.html#parameters", "URL Parameters", undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_command', me.htmlCls.baseUrl + "icn3d/icn3d.html#commands", "Commands", undefined, 2);
+
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_datastru', me.htmlCls.baseUrl + "icn3d/icn3d.html#datastructure", "Data Structure", undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_classstru', me.htmlCls.baseUrl + "icn3d/icn3d.html#classstructure", "Class Structure", undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_addclass', me.htmlCls.baseUrl + "icn3d/icn3d.html#addclass", "Add New Classes", undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_modfunc', me.htmlCls.baseUrl + "icn3d/icn3d.html#modifyfunction", "Modify Functions", undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_restful', me.htmlCls.baseUrl + "icn3d/icn3d.html#restfulapi", "RESTful APIs", undefined, 2);
+            html += me.htmlCls.setHtmlCls.getMenuUrl('dev_contributor', me.htmlCls.baseUrl + "icn3d/icn3d.html#contributors", "Codeathon Contributors", undefined, 2);
+            html += "</ul>";
+            html += "</li>";
+
+            //html += liStr + me.htmlCls.baseUrl + "icn3d/docs/icn3d_help.html' target='_blank'>Help Doc " + me.htmlCls.wifiStr + "</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('helpdoc', me.htmlCls.baseUrl + "icn3d/docs/icn3d_help.html", "Help Doc " + me.htmlCls.wifiStr, 1, 1);
+
+            html += me.htmlCls.setHtmlCls.getMenuSep();
+
+            //html += "<li><span>Transform Hints</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_tfhint', 'Transform Hints', undefined, 1, 1);
+            html += "<ul>";
+            //html += "<li><span>Rotate</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_rotate', 'Rotate', undefined, 1, 2);
             html += "<ul>";
             html += "<li>Left Mouse (Click & Drag)</li>";
             html += "<li>Key l: Left</li>";
@@ -58235,14 +59466,16 @@ var icn3d = (function (exports) {
             html += "<li>Shift + Key m: Down 90&deg;</li>";
             html += "</ul>";
             html += "</li>";
-            html += "<li><span>Zoom</span>";
+            //html += "<li><span>Zoom</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_zoom', 'Zoom', undefined, 1, 2);
             html += "<ul>";
             html += "<li>Middle Mouse <br>(Pinch & Spread)</li>";
             html += "<li>Key z: Zoom in</li>";
             html += "<li>Key x: Zoom out</li>";
             html += "</ul>";
             html += "</li>";
-            html += "<li><span>Translate</span>";
+            //html += "<li><span>Translate</span>";
+            html += me.htmlCls.setHtmlCls.getMenuText('mn6_translate', 'Translate', undefined, 1, 2);
             html += "<ul>";
             html += "<li>Right Mouse <br>(Two Finger Click & Drag)</li>";
             html += "</ul>";
@@ -58250,11 +59483,10 @@ var icn3d = (function (exports) {
             html += "</ul>";
             html += "</li>";
 
-            if(!me.cfg.simplemenu) {
-                html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#HowToUseStep5' target='_blank'>Selection Hints</a></li>";
-
-                html += liStr + "https://support.nlm.nih.gov/support/create-case/' target='_blank'>Write to Help Desk</a></li>";
-            }
+            //html += liStr + me.htmlCls.baseUrl + "icn3d/icn3d.html#HowToUseStep5' target='_blank'>Selection Hints</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('selhints', me.htmlCls.baseUrl + "icn3d/icn3d.html#HowToUseStep5", "Selection Hints", undefined, 1);
+            //html += liStr + "https://support.nlm.nih.gov/support/create-case/' target='_blank'>Write to Help Desk</a></li>";
+            html += me.htmlCls.setHtmlCls.getMenuUrl('helpdesk', "https://support.nlm.nih.gov/support/create-case/", "Write to Help Desk", 1, 1);
 
             html += "<li><br/></li>";
             html += "</ul>";
@@ -58864,10 +60096,21 @@ var icn3d = (function (exports) {
         }
 
         //A placeholder for all custom dialogs.
-        setCustomDialogs() {var me = this.icn3dui; me.icn3d;
+        setCustomDialogs() { let me = this.icn3dui; me.icn3d;
             if(me.bNode) return '';
 
             let html = "";
+            return html;
+        }
+
+        getHtmlAlignResidueByResidue(chainids, predefinedid, buttonid) { let me = this.icn3dui; me.icn3d;
+            let html = '';
+
+            html += "All chains will be aligned to the first chain in the comma-separated chain IDs. Each chain ID has the form of PDBID_chain (e.g., 1HHO_A, case sensitive) or UniprotID (e.g., P69905 for AlphaFold structures).<br/><br/>";
+            html += "<b>Chain IDs</b>: " + me.htmlCls.inputTextStr + "id='" + me.pre + chainids + "' value='P69905,P01942,1HHO_A' size=50><br/><br/>";
+            
+            html += "Each alignment is defined as \" | \"-separated residue lists in one line. \"10-50\" means a range of residues from 10 to 50.<br><textarea id='" + me.pre + predefinedid + "' rows='5' style='width: 100%; height: " +(me.htmlCls.LOG_HEIGHT) + "px; padding: 0px; border: 0px;'>1,5,10-50 | 1,5,10-50\n2,6,11-51 | 1,5,10-50</textarea><br/>";
+            html += me.htmlCls.buttonStr + buttonid + "'><b>Align Residue by Residue</b></button><br/>";
             return html;
         }
 
@@ -58956,25 +60199,39 @@ var icn3d = (function (exports) {
 
             html += me.htmlCls.divStr + "dl_vast' class='" + dialogClass + "' style='max-width:500px'>";
             html += 'Note: <b>VAST</b> identifies 3D domains (substructures) within each protein structure in the Molecular Modeling Database (MMDB), and then finds other protein structures that have one or more similar 3D domains, using purely geometric criteria. You have two ways to do a VAST search.<br><br>'; 
-            html += '<b>Optione 1</b>, search with PDB ID and chain name:<br>'; 
+
+            html += '<b>Optione 1</b>, search with your selection (all residues are selected by default) in the loaded structures:<br>'; 
+            html += '<form method=post enctype=multipart/form-data action="https://www.ncbi.nlm.nih.gov/Structure/vast/VSMmdb.cgi" id="' + me.pre + 'newvs2" name="newvs2" target="_blank">';
+            html += '<input type=hidden id="' + me.pre + 'pdbstr" name="pdbstr">';
+            html += "Searching against: <input type='radio' name='dataset' value='Non-redundant subset' checked> Medium-redundancy Subset of PDB <a href='https://www.ncbi.nlm.nih.gov/Structure/VAST/vasthelp.html#VASTNR' title='Medium-redundancy Subset' target='_blank'>?</a> <input type='radio' name='dataset' value='All'>All of PDB <br>";
+            // the submit value has to be "Submit" in order to make the backend cgi works
+            //html += '<input type="submit" name="' + me.pre + 'cmdVSMmdb" value="VAST Search"></input>';
+            html += '<input type="submit" id="' + me.pre + 'cmdVSMmdb2" name="cmdVSMmdb" value="Submit"></input>';
+            html += "</form><br>";
+
+            html += '<b>Optione 2</b>, search with PDB ID and chain name:<br>'; 
             html += "PDB ID: " + me.htmlCls.inputTextStr + "id='" + me.pre + "vastpdbid' value='1HHO' size=8> &nbsp;&nbsp;";
             html += "Chain Name: " + me.htmlCls.inputTextStr + "id='" + me.pre + "vastchainid' value='A' size=8> <br>";
             html += me.htmlCls.buttonStr + "reload_vast'>VAST</button><br><br>";
 
-            html += '<b>Optione 2</b>, search with a PDB file:<br>'; 
-            html += '<form method=post enctype=multipart/form-data action="https://www.ncbi.nlm.nih.gov/Structure/vast/VSMmdb.cgi" name="newvs" target="_blank">';
+            html += '<b>Optione 3</b>, search with a PDB file:<br>'; 
+            html += '<form method=post enctype=multipart/form-data action="https://www.ncbi.nlm.nih.gov/Structure/vast/VSMmdb.cgi" id="' + me.pre + 'newvs" name="newvs" target="_blank">';
             html += "PDB File: " + me.htmlCls.inputFileStr + " name='pdbfile' size=8><br>";
             html += "Searching against: <input type='radio' name='dataset' value='Non-redundant subset' checked> Medium-redundancy Subset of PDB <a href='https://www.ncbi.nlm.nih.gov/Structure/VAST/vasthelp.html#VASTNR' title='Medium-redundancy Subset' target='_blank'>?</a> <input type='radio' name='dataset' value='All'>All of PDB <br>";
             // the submit value has to be "Submit" in order to make the backend cgi works
-            //html += '<input type="submit" name="cmdVSMmdb" value="VAST Search"></input>';
+            //html += '<input type="submit" name="' + me.pre + 'cmdVSMmdb" value="VAST Search"></input>';
             html += '<input type="submit" name="cmdVSMmdb" value="Submit"></input>';
-            html += "</form>";
+            html += "</form><br>";
 
             html += "</div>";
 
             html += me.htmlCls.divStr + "dl_foldseek' class='" + dialogClass + "' style='max-width:500px'>";
-            html += 'Note: You can search similar PDB or AlphaFold structures for any structure at the fast <a href="https://search.foldseek.com/search" target="_blank">Foldseek</a> web server. <br><br>Once you see the structure neighbors, you can view the alignment in iCn3D by inputing a list of chain IDs below. <br><br>The PDB chain IDs are the same as the record names such as "1hho_A". The AlphaFold chain IDs are the UniProt ID plus "_A". For example, the UniProt ID for the record name "AF-P69905-F1-model_v2" is "P69905".<br><br>'; 
-            html += "Chain ID List: " + me.htmlCls.inputTextStr + "id='" + me.pre + "foldseekchainids' value='P69905_A,P01942_A,1HHO_A' size=30> ";
+            html += '1. <input type="submit" id="' + me.pre + 'fssubmit" name="fssubmit" value="Submit"></input> your selection (all residues are selected by default) in the loaded structures to <a href="https://search.foldseek.com/search" target="_blank">Foldseek</a> web server.<br><br>';
+            html += '2 (Optional). Once you see the structure neighbors, you can view the alignment in iCn3D by inputing a list of PDB chain IDs or AlphaFold UniProt IDs below. <br><br>The PDB chain IDs are the same as the record names such as "1hho_A". The UniProt ID is the text between "AF-" and "-F1". For example, the UniProt ID for the record name "AF-P69905-F1-model_v3" is "P69905".<br><br>'; 
+
+            //html += 'Note: You can search similar PDB or AlphaFold structures for any structure at the fast <a href="https://search.foldseek.com/search" target="_blank">Foldseek</a> web server. <br><br>Once you see the structure neighbors, you can view the alignment in iCn3D by inputing a list of PDB chain IDs or AlphaFold UniProt IDs below. <br><br>The PDB chain IDs are the same as the record names such as "1hho_A". The UniProt ID is the text between "AF-" and "-F1". For example, the UniProt ID for the record name "AF-P69905-F1-model_v3" is "P69905".<br><br>'; 
+
+            html += "Chain ID List: " + me.htmlCls.inputTextStr + "id='" + me.pre + "foldseekchainids' value='P69905,P01942,1hho_A' size=30> ";
             html += me.htmlCls.buttonStr + "reload_foldseek'>Align</button>";
             html += "</div>";
 
@@ -58992,7 +60249,7 @@ var icn3d = (function (exports) {
             html += "Note: AlphaFold produces a per-residue confidence score (pLDDT) between 0 and 100:<br>";
             html += me.htmlCls.clickMenuCls.setAlphaFoldLegend() + "<br>";
 
-            let afid = (me.cfg.afid) ? me.cfg.afid : 'Q76EI6';
+            let afid = (me.cfg.afid) ? me.cfg.afid : 'A4D1S0';
 
             html += "<a href='https://alphafold.ebi.ac.uk/' target='_blank'>AlphaFold Uniprot</a> ID: " + me.htmlCls.inputTextStr + "id='" + me.pre + "afid' value='" + afid + "' size=10><br><br>";
             html += me.htmlCls.buttonStr + "reload_af'>Load Structure</button><br><br>"; 
@@ -59051,10 +60308,11 @@ var icn3d = (function (exports) {
             html += "</div>";
 
             html += me.htmlCls.divStr + "dl_align' class='" + dialogClass + "'>";
-            html += "Enter the PDB IDs or MMDB IDs of two structures that have been found to be similar by <A HREF=' " + me.htmlCls.baseUrl + "vastplus/vastplus.cgi'>VAST+</A> : <br/><br/>ID1: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid1' value='1HHO' size=8>" + me.htmlCls.space3 + me.htmlCls.space3 + "ID2: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid2' value='4N7N' size=8><br/><br/>";
-            html += me.htmlCls.buttonStr + "reload_align_ori'>All Matching Molecules Superposed</button>" + me.htmlCls.space3 + me.htmlCls.buttonStr + "reload_align_refined'>Invariant Substructure Superposed</button>";
+            html += "Enter the PDB IDs or MMDB IDs of the structures: <br/><br/>ID1: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid1' value='1HHO' size=8>" + me.htmlCls.space3 + me.htmlCls.space3 + "ID2: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid2' value='4N7N' size=8><br/><br/>";
+            html += "<b>VAST+ based on VAST</b>: " + me.htmlCls.buttonStr + "reload_align_ori'>All Matching Molecules Superposed</button>" + me.htmlCls.space3 + me.htmlCls.buttonStr + "reload_align_refined'>Invariant Substructure Superposed</button><br><br>";
+            html += "<b>VAST+ based on TM-align</b>: " + me.htmlCls.buttonStr + "reload_align_tmalign'>All Matching Molecules Superposed</button><br><br>";
             html += "</div>";
-
+            
             html += me.htmlCls.divStr + "dl_alignaf' class='" + dialogClass + "'>";
             html += "Enter two <a href='https://alphafold.ebi.ac.uk/' target='_blank'>AlphaFold Uniprot</a> IDs: <br/><br/>ID1: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignafid1' value='P41327' size=8>" + me.htmlCls.space3 + me.htmlCls.space3 + "ID2: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignafid2' value='P41331' size=8><br/><br/>";
             html += me.htmlCls.buttonStr + "reload_alignaf_tmalign'>Align with TM-align</button>" + me.htmlCls.buttonStr + "reload_alignaf' style='margin-left:30px'>Align with VAST</button>";
@@ -59082,13 +60340,14 @@ var icn3d = (function (exports) {
 
             html += me.htmlCls.divStr + "dl_chainalign3' class='" + dialogClass + "'>";
             html += "<div style='width:550px'>";
-            html += "All chains will be aligned to the first chain in the comma-separated chain IDs. Each chain ID has the form of PDBID_chain (e.g., 1HHO_A, case sensitive) or UniprotID (e.g., P69905 for AlphaFold structures).<br/><br/>";
-            html += "<b>Chain IDs</b>: " + me.htmlCls.inputTextStr + "id='" + me.pre + "chainalignids3' value='P69905,P01942,1HHO_A' size=50><br/><br/>";
-            
-            html += "Each alignment is defined as \" | \"-separated residue lists in one line. \"10-50\" means a range of residues from 10 to 50.<br><textarea id='" + me.pre + "predefinedres' rows='5' style='width: 100%; height: " +(me.htmlCls.LOG_HEIGHT) + "px; padding: 0px; border: 0px;'>1,5,10-50 | 1,5,10-50     \n2,6,11-51 | 1,5,10-50</textarea><br/>";
-            html += me.htmlCls.buttonStr + "reload_chainalign_asym3'><b>Align Residue by Residue</b></button><br/><br/>";
+            html += this.getHtmlAlignResidueByResidue('chainalignids3', 'predefinedres', 'reload_chainalign_asym3');
+            html += "</div></div>";
 
-            html += "(Note: To align chains in custom PDB files, you could load them in \"File > Open File > PDB Files (appendable)\" and click \"Analysis > Defined Sets\". Finally select multiple chains in Defined Sets and click \"File > Realign Selection\".)<br><br>";
+            html += me.htmlCls.divStr + "dl_realignresbyres' class='" + dialogClass + "'>";
+            html += "<div style='width:550px'>";
+            html += "<b>Option 1</b>: " + me.htmlCls.buttonStr + "realignSelection'><b>Realign Current Selection Residue by Residue</b></button><br/><br/>";
+            html += "<b>Option 2</b>: <br>";
+            html += "<div class='icn3d-box'>" + this.getHtmlAlignResidueByResidue('chainalignids4', 'predefinedres2', 'reload_chainalign_asym4') + "</div>";
             html += "</div></div>";
 
             html += me.htmlCls.divStr + "dl_mutation' class='" + dialogClass + "'>";
@@ -59096,11 +60355,19 @@ var icn3d = (function (exports) {
             html += 'Please specify the mutations with a comma separated mutation list. Each mutation can be specified as "[PDB ID or AlphaFold UniProt ID]_[Chain ID]_[Residue Number]_[One Letter Mutatnt Residue]". E.g., the mutation of N501Y in the E chain of PDB 6M0J can be specified as "6M0J_E_501_Y". For AlphaFold structures, the "Chain ID" is "A".<br/><br/>';
             html += "<div style='display:inline-block; width:110px'>Mutations: </div>" + me.htmlCls.inputTextStr + "id='" + me.pre + "mutationids' value='6M0J_E_484_K,6M0J_E_501_Y,6M0J_E_417_N' size=50><br/><br/>";
 
-            html += "<b>Data Source</b>: <select id='" + me.pre + "idsource'>";
-            html += "<option value='mmdbid' selected>PDB ID</option>";
-            html += "<option value='afid'>AlphaFold UniProt ID</option>";
-            html += "</select><br/><br/>";
-            
+            // html += "<b>Data Source</b>: <select id='" + me.pre + "idsource'>";
+            // html += "<option value='mmdbid' selected>PDB ID</option>";
+            // html += "<option value='afid'>AlphaFold UniProt ID</option>";
+            // html += "</select><br/><br/>";
+     
+            html += '<b>ID Type</b>: ';
+            html += '<input type="radio" name="' + me.pre + 'idsource" id="' + me.pre + 'type_mmdbid" value="mmdbid" checked>PDB ID';
+            html += '<input type="radio" name="' + me.pre + 'idsource" id="' + me.pre + 'type_afid" value="afid" style="margin-left:20px">AlphaFold UniProt ID<br><br>';
+
+            html += '<b>Show Mutation in</b>: ';
+            html += '<input type="radio" name="' + me.pre + 'pdbsource" id="' + me.pre + 'showin_currentpage" value="currentpage">Current Page';
+            html += '<input type="radio" name="' + me.pre + 'pdbsource" id="' + me.pre + 'showin_newpage" value="newpage" style="margin-left:20px" checked>New Page<br><br>';
+
             html += me.htmlCls.buttonStr + "reload_mutation_3d' title='Show the mutations in 3D using the scap program'>3D with scap</button>";
             html += me.htmlCls.buttonStr + "reload_mutation_inter' style='margin-left:20px' title='Show the mutations in 3D and the change of interactions'>Interactions</button>";
             html += me.htmlCls.buttonStr + "reload_mutation_pdb' style='margin-left:20px' title='Show the mutations in 3D and export the PDB of the mutant within 10 angstrom'>PDB</button>";
@@ -59162,7 +60429,7 @@ var icn3d = (function (exports) {
             html += "</div>";
 
             html += me.htmlCls.divStr + "dl_mmdbafid' class='" + dialogClass + "' style='max-width:500px'>";
-            html += "List of MMDB, PDB, or AlphaFold UniProt IDs: " + me.htmlCls.inputTextStr + "id='" + me.pre + "mmdbafid' value='1HHO,4N7N,P69905,P01942' size=30> <br><br>";
+            html += "List of PDB, MMDB, or AlphaFold UniProt IDs: " + me.htmlCls.inputTextStr + "id='" + me.pre + "mmdbafid' value='1HHO,4N7N,P69905,P01942' size=30> <br><br>";
             html += me.htmlCls.buttonStr + "reload_mmdbaf_asym'>Load Asymmetric Unit (All Chains)</button>" + me.htmlCls.buttonStr + "reload_mmdbaf' style='margin-left:30px'>Load Biological Unit</button><br/><br/><br>";
             html += '<b>Note</b>: The "<b>biological unit</b>" is the <b>biochemically active form of a biomolecule</b>, <div style="width:20px; margin:6px 0 0 20px; display:inline-block;"><span id="'
             + me.pre + 'asu_bu2_expand" class="ui-icon ui-icon-plus icn3d-expand icn3d-link" style="width:15px;" title="Expand"></span><span id="'
@@ -59184,7 +60451,7 @@ var icn3d = (function (exports) {
             html += "</div>";
 
             html += me.htmlCls.divStr + "dl_yournote' class='" + dialogClass + "'>";
-            html += "Your note will be saved in the HTML file when you click \"File > Save Files > iCn3D PNG Image\".<br><br>";
+            html += "Your note will be saved in the HTML file when you click \"File > Save File > iCn3D PNG Image\".<br><br>";
             html += "<textarea id='" + me.pre + "yournote' rows='5' style='width: 100%; height: " +(me.htmlCls.LOG_HEIGHT) + "px; padding: 0px; border: 0px;' placeholder='Enter your note here'></textarea><br>";
             html += me.htmlCls.buttonStr + "applyyournote'>Save</button>";
             html += "</div>";
@@ -59192,6 +60459,11 @@ var icn3d = (function (exports) {
             html += me.htmlCls.divStr + "dl_gi' class='" + dialogClass + "'>";
             html += "Protein gi: " + me.htmlCls.inputTextStr + "id='" + me.pre + "gi' value='1310960' size=8> ";
             html += me.htmlCls.buttonStr + "reload_gi'>Load</button>";
+            html += "</div>";
+
+            html += me.htmlCls.divStr + "dl_refseq' class='" + dialogClass + "'>";
+            html += "Protein RefSeq: " + me.htmlCls.inputTextStr + "id='" + me.pre + "refseq' value='0308234A' size=8> ";
+            html += me.htmlCls.buttonStr + "reload_refseq'>Load</button>";
             html += "</div>";
 
             html += me.htmlCls.divStr + "dl_uniprotid' class='" + dialogClass + "'>";
@@ -59225,6 +60497,11 @@ var icn3d = (function (exports) {
             html += me.htmlCls.divStr + "dl_selection' class='" + dialogClass + "'>";
             html += "Selection file: " + me.htmlCls.inputFileStr + "id='" + me.pre + "selectionfile'><br/>";
             html += me.htmlCls.buttonStr + "reload_selectionfile' style='margin-top: 6px;'>Load</button>";
+            html += "</div>";
+
+            html += me.htmlCls.divStr + "dl_menuloadpref' class='" + dialogClass + "'>";
+            html += "Preference file: " + me.htmlCls.inputFileStr + "id='" + me.pre + "menupreffile'><br/>";
+            html += me.htmlCls.buttonStr + "reload_menupreffile' style='margin-top: 6px;'>Load</button>";
             html += "</div>";
 
             html += me.htmlCls.divStr + "dl_dsn6' class='" + dialogClass + "'>";
@@ -59422,18 +60699,29 @@ var icn3d = (function (exports) {
 
             html += me.htmlCls.divNowrapStr + "1. Select sets below <br>or use your current selection:</div><br>";
             html += "<div style='text-indent:1.1em'><select id='" + me.pre + "atomsCustomRealign' multiple size='5' style='min-width:130px;'>";
-            html += "</select></div>";
+            html += "</select></div><br>";
 
             html += "<div>2. " + me.htmlCls.buttonStr + "applyRealign'>Realign by Sequence</button></div><br>";
             html += "</div>";
 
             html += me.htmlCls.divStr + "dl_realignbystruct' class='" + dialogClass + "'>";
 
-            html += me.htmlCls.divNowrapStr + "1. Select sets below <br>or use your current selection:</div><br>";
+            html += me.htmlCls.divNowrapStr + "1. Select sets in two chains below <br>or use your current selection:</div><br>";
             html += "<div style='text-indent:1.1em'><select id='" + me.pre + "atomsCustomRealignByStruct' multiple size='5' style='min-width:130px;'>";
-            html += "</select></div>";
+            html += "</select></div><br>";
 
             html += "<div>2. " + me.htmlCls.buttonStr + "applyRealignByStruct_tmalign'>Realign with TM-align</button>" + me.htmlCls.buttonStr + "applyRealignByStruct' style='margin-left:30px'>Realign with VAST</button></div><br>";
+            html += "</div>";
+
+            html += me.htmlCls.divStr + "dl_realigntwostru' class='" + dialogClass + "'>";
+
+            html += me.htmlCls.divNowrapStr + "1. Select sets in two structures below <br>or use your current selection:</div><br>";
+            html += "<div style='text-indent:1.1em'><select id='" + me.pre + "atomsCustomRealignByStruct2' multiple size='5' style='min-width:130px;'>";
+            html += "</select></div><br>";
+
+            html += "2. Overall maximum RMSD: " + me.htmlCls.inputTextStr + "id='" + me.pre + "maxrmsd' value='30' size='2'> &#197; <br><br>";
+
+            html += "<div>3. " + me.htmlCls.buttonStr + "applyRealignByStruct_vastplus'>VAST+ Alignment based on TM-align</button></div><br>";
             html += "</div>";
 
 
@@ -59721,6 +61009,15 @@ var icn3d = (function (exports) {
             html += me.htmlCls.setHtmlCls.setThicknessHtml('style');
             html += "</div>";
 
+            html += me.htmlCls.divStr + "dl_menupref' class='" + dialogClass + "'>";
+            html += "<b>Note</b>: The following parameters will be saved in cache. You just need to set them once. <br><br>";
+            html += "<div id='" + me.pre + "menulist' style='max-width:500px; max-height:300px; overflow:scroll'></div><br><br>";
+            html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "apply_menupref'>Apply</button></span>";
+            html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "reset_menupref' style='margin-left:30px'>Reset to Simple Menus</button></span>";
+            html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "reset_menupref_all' style='margin-left:30px'>Reset to All Menus</button></span>";
+            html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "savepref' style='margin-left:30px'>Save Preferences</button></span>";
+            html += "</div>";
+
             html += me.htmlCls.divStr + "dl_addtrack' class='" + dialogClass + "'>";
             html += " <input type='hidden' id='" + me.pre + "track_chainid' value=''>";
 
@@ -59890,7 +61187,7 @@ var icn3d = (function (exports) {
             html += "<button style='white-space:nowrap;' id='" + me.pre + "applycolorbyarea'>Color</button><br/><br/>";
             html += "</div>";
 
-            html += me.htmlCls.divStr + "dl_rmsd' class='" + dialogClass + "'>";
+            html += me.htmlCls.divStr + "dl_rmsd' class='" + dialogClass + "' style='max-width:300px'>";
             
             html += "</div>";
 
@@ -59939,10 +61236,17 @@ var icn3d = (function (exports) {
             html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_custom'>Custom" + me.htmlCls.space2 + "</span></td>";
             html += tmpStr2 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_3dd'>3D Domains" + me.htmlCls.space2 + "</span></td>";
             html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_snp'>SNPs" + me.htmlCls.space2 + "</span></td>";
-            html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_interact'>Interactions" + me.htmlCls.space2 + "</span></td>";
+            
+            // if(me.cfg.mmdbid != undefined || me.cfg.pdbid != undefined || me.cfg.mmtfid != undefined || me.cfg.mmcifid != undefined) { // PDB
+            //     html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_ptm' disabled>PTM (UniProt)" + me.htmlCls.space2 + "</span></td>";
+            // }
+            // else {
+                html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_ptm'>PTM (UniProt)" + me.htmlCls.space2 + "</span></td>";
+            // }
             html += "<td></td>";
             html += "</tr><tr>";
             html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_ssbond'>Disulfide Bonds" + me.htmlCls.space2 + "</span></td>";
+            html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_interact'>Interactions" + me.htmlCls.space2 + "</span></td>";
             html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_crosslink'>Cross-Linkages" + me.htmlCls.space2 + "</span></td>";
             if(me.cfg.opmid !== undefined) {
                 html += "<td style='min-width:110px;'><span id='" + me.pre + "anno_transmemli' style='white-space:nowrap'>" + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_transmem'>Transmembrane" + me.htmlCls.space2 + "</span></td>";
@@ -59979,6 +61283,17 @@ var icn3d = (function (exports) {
                 ic.applyCenterCls.setWidthHeight(me.htmlCls.WIDTH, me.htmlCls.HEIGHT);
                 ic.drawCls.draw();
             }
+        }
+
+        convertUniProtInChains(alignment) { let me = this.icn3dui; me.icn3d;
+            let idArray = alignment.split(',');
+            let alignment_final = '';
+            for(let i = 0, il = idArray.length; i < il; ++i) {
+                alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
+                if(i < il - 1) alignment_final += ',';
+            }
+
+            return alignment_final;
         }
 
         searchSeq() { let me = this.icn3dui, ic = me.icn3d;
@@ -60085,6 +61400,25 @@ var icn3d = (function (exports) {
             let structureStr = Object.keys(ic.structures)[0];
             if(Object.keys(ic.structures).length > 1) structureStr += '-' + Object.keys(ic.structures)[1];
             ic.saveFileCls.saveFile(structureStr + '-' + idStr + '.html', 'html', encodeURIComponent(html));
+        }
+
+        setPredefinedMenu(id) { let me = this.icn3dui, ic = me.icn3d;
+            if(Object.keys(ic.structures).length < 2) {
+                alert("At least two structures are required for alignment...");
+                return;
+            }
+            if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
+                let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
+                ic.definedSetsCls.setPredefinedInMenu();
+                ic.bSetChainsAdvancedMenu = true;
+                ic.hAtoms = me.hashUtilsCls.cloneHash(prevHAtoms);
+            }
+            let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
+            if($("#" + me.pre + id).length) {
+                $("#" + me.pre + id).html(definedAtomsHtml);
+            }
+            
+            $("#" + me.pre + id).resizable();
         }
 
         //Hold all functions related to click events.
@@ -60231,9 +61565,13 @@ var icn3d = (function (exports) {
             });
         //    },
         //    clickRealign: function() {
-            me.myEventCls.onIds("#" + me.pre + "mn2_realignresbyres", "click", function(e) { let ic = me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "mn2_realignresbyres", "click", function(e) { me.icn3d;
+                me.htmlCls.dialogCls.openDlg('dl_realignresbyres', 'Align multiple chains residue by residue');
+            });
+
+            me.myEventCls.onIds("#" + me.pre + "realignSelection", "click", function(e) { let ic = me.icn3d;
                 if(Object.keys(ic.structures).length < 2) {
-                    alert("At least two structuresare required for alignment...");
+                    alert("At least two structures are required for alignment...");
                     return;
                 }
                 
@@ -60243,49 +61581,23 @@ var icn3d = (function (exports) {
         //    },
         //    clickRealignonseqalign: function() {
             me.myEventCls.onIds("#" + me.pre + "mn2_realignonseqalign", "click", function(e) { let ic = me.icn3d;
-                if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realign', 'Please select two sets to realign');
+                if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realign', 'Please select two sets in two chains to realign');
 
-                if(Object.keys(ic.structures).length < 2) {
-                    alert("At least two structuresare required for alignment...");
-                    return;
-                }
-
-                if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
-                   let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
-                   ic.definedSetsCls.setPredefinedInMenu();
-                   ic.bSetChainsAdvancedMenu = true;
-                   ic.hAtoms = me.hashUtilsCls.cloneHash(prevHAtoms);
-                }
-                let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
-                if($("#" + me.pre + "atomsCustomRealign").length) {
-                    $("#" + me.pre + "atomsCustomRealign").html(definedAtomsHtml);
-                }
-                
-                $("#" + me.pre + "atomsCustomRealign").resizable();
-                //$("#" + me.pre + "atomsCustomRealign2").resizable();
+                thisClass.setPredefinedMenu('atomsCustomRealign');
             });
 
             me.myEventCls.onIds("#" + me.pre + "mn2_realignonstruct", "click", function(e) { let ic = me.icn3d;
-                if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realignbystruct', 'Please select two sets to realign');
+                if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realignbystruct', 'Please select two sets in two chains to realign');
 
-                if(Object.keys(ic.structures).length < 2) {
-                    alert("At least two structuresare required for alignment...");
-                    return;
-                }
-                if(ic.bSetChainsAdvancedMenu === undefined || !ic.bSetChainsAdvancedMenu) {
-                   let prevHAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
-                   ic.definedSetsCls.setPredefinedInMenu();
-                   ic.bSetChainsAdvancedMenu = true;
-                   ic.hAtoms = me.hashUtilsCls.cloneHash(prevHAtoms);
-                }
-                let definedAtomsHtml = ic.definedSetsCls.setAtomMenu(['protein']);
-                if($("#" + me.pre + "atomsCustomRealignByStruct").length) {
-                    $("#" + me.pre + "atomsCustomRealignByStruct").html(definedAtomsHtml);
-                }
-                
-                $("#" + me.pre + "atomsCustomRealignByStruct").resizable();
-                //$("#" + me.pre + "atomsCustomRealign2").resizable();
+                thisClass.setPredefinedMenu('atomsCustomRealignByStruct');
             });
+
+            me.myEventCls.onIds("#" + me.pre + "mn2_realigntwostru", "click", function(e) { let ic = me.icn3d;
+                if(ic.bRender) me.htmlCls.dialogCls.openDlg('dl_realigntwostru', 'Please select two sets in two structures to realign');
+
+                thisClass.setPredefinedMenu('atomsCustomRealignByStruct2');
+            });
+
         //    },
         //    clickApplyRealign: function() {
             me.myEventCls.onIds("#" + me.pre + "applyRealign", "click", function(e) { let ic = me.icn3d;
@@ -60319,10 +61631,7 @@ var icn3d = (function (exports) {
                     ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
                 }
      
-                // save the current selection
-                //ic.selectionCls.saveSelectionPrep();
-                //let name = 'realignSetsByStruct';
-                //ic.selectionCls.saveSelection(name, name);
+                me.cfg.aligntool = 'vast';
      
                 ic.realignParserCls.realignOnStructAlign();
                 if(nameArray.length > 0) {
@@ -60349,6 +61658,26 @@ var icn3d = (function (exports) {
                 }
                 else {
                     me.htmlCls.clickMenuCls.setLogCmd("realign on tmalign", true);
+                }
+             });
+
+             me.myEventCls.onIds("#" + me.pre + "applyRealignByStruct_vastplus", "click", function(e) { let ic = me.icn3d;
+                e.preventDefault();
+                if(!me.cfg.notebook) dialog.dialog( "close" );
+                let nameArray = $("#" + me.pre + "atomsCustomRealignByStruct2").val();
+                if(nameArray.length > 0) {
+                    ic.hAtoms = ic.definedSetsCls.getAtomsFromNameArray(nameArray);
+                }
+
+                //me.cfg.aligntool = 'tmalign';
+
+                ic.vastplusCls.realignOnVastplus();
+
+                if(nameArray.length > 0) {
+                    me.htmlCls.clickMenuCls.setLogCmd("realign on vastplus | " + nameArray, true);
+                }
+                else {
+                    me.htmlCls.clickMenuCls.setLogCmd("realign on vastplus", true);
                 }
              });
         //    },
@@ -60454,8 +61783,16 @@ var icn3d = (function (exports) {
             me.myEventCls.onIds("#" + me.pre + "reload_foldseek", "click", function(e) { me.icn3d;
                 e.preventDefault();
                 if(!me.cfg.notebook) dialog.dialog( "close" );
-                me.htmlCls.clickMenuCls.setLogCmd("load chainalignment " + $("#" + me.pre + "foldseekchainids").val(), true);
-                window.open(hostUrl + '?chainalign=' + $("#" + me.pre + "foldseekchainids").val(), '_self');
+
+                // me.htmlCls.clickMenuCls.setLogCmd("load chainalignment " + $("#" + me.pre + "foldseekchainids").val(), true);
+                // window.open(hostUrl + '?chainalign=' + $("#" + me.pre + "foldseekchainids").val(), '_self');
+
+
+                let alignment = $("#" + me.pre + "foldseekchainids").val();
+                let alignment_final = thisClass.convertUniProtInChains(alignment);
+
+                me.htmlCls.clickMenuCls.setLogCmd("load chainalignment " + alignment_final, true);
+                window.open(hostUrl + '?chainalign=' + alignment_final + '&aligntool=tmalign&showalignseq=1&bu=0', '_self');
              });
 
             me.myEventCls.onIds("#" + me.pre + "reload_mmtf", "click", function(e) { me.icn3d;
@@ -60574,6 +61911,14 @@ var icn3d = (function (exports) {
                 window.open(hostUrl + '?align=' + alignment + '&showalignseq=1&atype=0&bu=1', '_blank');
              });
 
+            me.myEventCls.onIds("#" + me.pre + "reload_align_tmalign", "click", function(e) { me.icn3d;
+                e.preventDefault();
+                if(!me.cfg.notebook) dialog.dialog( "close" );
+                let alignment = $("#" + me.pre + "alignid1").val() + "," + $("#" + me.pre + "alignid2").val();
+                me.htmlCls.clickMenuCls.setLogCmd("load alignment " + alignment + ' | parameters &atype=2&bu=1', false);
+                window.open(hostUrl + '?align=' + alignment + '&showalignseq=1&atype=2&bu=1', '_blank');
+             });
+
             me.myEventCls.onIds("#" + me.pre + "reload_alignaf", "click", function(e) { me.icn3d;
                 e.preventDefault();
                 if(!me.cfg.notebook) dialog.dialog( "close" );
@@ -60597,15 +61942,10 @@ var icn3d = (function (exports) {
                if(!me.cfg.notebook) dialog.dialog( "close" );
 
                let alignment = $("#" + me.pre + "chainalignids").val();
-               let idArray = alignment.split(',');
-               let alignment_final = '';
-               for(let i = 0, il = idArray.length; i < il; ++i) {
-                   alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                   if(i < il - 1) alignment_final += ',';
-               }
+               let alignment_final = thisClass.convertUniProtInChains(alignment);
                let resalign = $("#" + me.pre + "resalignids").val();
-               let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, '; ');
-               if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split('; ').length) {
+               let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, ': ');
+               if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split(': ').length) {
                    alert("Please make sure the number of chains and the lines of predefined residues are the same...");
                    return;
                }
@@ -60620,12 +61960,7 @@ var icn3d = (function (exports) {
                if(!me.cfg.notebook) dialog.dialog( "close" );
 
                let alignment = $("#" + me.pre + "chainalignids").val();
-               let idArray = alignment.split(',');
-               let alignment_final = '';
-               for(let i = 0, il = idArray.length; i < il; ++i) {
-                   alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                   if(i < il - 1) alignment_final += ',';
-               }
+               let alignment_final = thisClass.convertUniProtInChains(alignment);
 
                me.htmlCls.clickMenuCls.setLogCmd("load chains " + alignment_final + " on asymmetric unit | residues | resdef ", false);
                window.open(hostUrl + '?chainalign=' + alignment_final + '&resnum=&resdef=&showalignseq=1&bu=0', '_blank');
@@ -60636,12 +61971,7 @@ var icn3d = (function (exports) {
                 if(!me.cfg.notebook) dialog.dialog( "close" );
      
                 let alignment = $("#" + me.pre + "chainalignids2").val();
-                let idArray = alignment.split(',');
-                let alignment_final = '';
-                for(let i = 0, il = idArray.length; i < il; ++i) {
-                    alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                    if(i < il - 1) alignment_final += ',';
-                }
+                let alignment_final = thisClass.convertUniProtInChains(alignment);
                 let resalign = $("#" + me.pre + "resalignids").val();
      
                 me.htmlCls.clickMenuCls.setLogCmd("load chains " + alignment_final + " on asymmetric unit | residues " + resalign + " | resdef ", false);
@@ -60653,15 +61983,10 @@ var icn3d = (function (exports) {
                 if(!me.cfg.notebook) dialog.dialog( "close" );
      
                 let alignment = $("#" + me.pre + "chainalignids3").val();
-                let idArray = alignment.split(',');
-                let alignment_final = '';
-                for(let i = 0, il = idArray.length; i < il; ++i) {
-                    alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                    if(i < il - 1) alignment_final += ',';
-                }
+                let alignment_final = thisClass.convertUniProtInChains(alignment);
 
-                let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, '; ');
-                if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split('; ').length) {
+                let predefinedres = $("#" + me.pre + "predefinedres").val().trim().replace(/\n/g, ': ');
+                if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split(': ').length) {
                     alert("Please make sure the number of chains and the lines of predefined residues are the same...");
                     return;
                 }
@@ -60670,71 +61995,160 @@ var icn3d = (function (exports) {
                 window.open(hostUrl + '?chainalign=' + alignment_final + '&resnum=&resdef=' + predefinedres + '&showalignseq=1&bu=0', '_blank');
              });
 
+             me.myEventCls.onIds("#" + me.pre + "reload_chainalign_asym4", "click", function(e) { let ic = me.icn3d;
+                e.preventDefault();
+                if(!me.cfg.notebook) dialog.dialog( "close" );
+     
+                let alignment = $("#" + me.pre + "chainalignids4").val();
+                let alignment_final = thisClass.convertUniProtInChains(alignment);
+
+                let predefinedres = $("#" + me.pre + "predefinedres2").val().trim().replace(/\n/g, ': ');
+                if(predefinedres && alignment_final.split(',').length - 1 != predefinedres.split(': ').length) {
+                    alert("Please make sure the number of chains and the lines of predefined residues are the same...");
+                    return;
+                }
+
+                me.cfg.resdef = predefinedres.replace(/:/gi, ';');
+
+                let bRealign = true, bPredefined = true;
+                let chainidArray = alignment_final.split(',');
+                ic.realignParserCls.realignChainOnSeqAlign(undefined, chainidArray, bRealign, bPredefined);
+     
+                me.htmlCls.clickMenuCls.setLogCmd("realign predefined " + alignment_final + " " + predefinedres, true);
+             });
+
             me.myEventCls.onIds("#" + me.pre + "reload_chainalign_tmalign", "click", function(e) { me.icn3d;
                 e.preventDefault();
                 if(!me.cfg.notebook) dialog.dialog( "close" );
 
                 let alignment = $("#" + me.pre + "chainalignids").val();
-                let idArray = alignment.split(',');
-                let alignment_final = '';
-                for(let i = 0, il = idArray.length; i < il; ++i) {
-                    alignment_final += (idArray[i].indexOf('_') != -1) ? idArray[i] : idArray[i] + '_A'; // AlphaFold ID
-                    if(i < il - 1) alignment_final += ',';
-                }
+                let alignment_final = thisClass.convertUniProtInChains(alignment);
      
                 me.htmlCls.clickMenuCls.setLogCmd("load chains " + alignment_final + " on asymmetric unit | residues | resdef | align tmalign", false);
                 window.open(hostUrl + '?chainalign=' + alignment_final + '&aligntool=tmalign&resnum=&resdef=&showalignseq=1&bu=0', '_blank');
              });
 
-            me.myEventCls.onIds("#" + me.pre + "reload_mutation_3d", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "reload_mutation_3d", "click", function(e) { let ic = me.icn3d;
                e.preventDefault();
                if(!me.cfg.notebook) dialog.dialog( "close" );
                let mutationids = $("#" + me.pre + "mutationids").val();
-               let idsource = $("#" + me.pre + "idsource").val();
-               let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));           
-               me.htmlCls.clickMenuCls.setLogCmd("3d of mutation " + mutationids, false);
-               //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap 3d ' + mutationids + '; select displayed set', '_blank');
-               window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap 3d ' + mutationids + '; select displayed set', '_blank');
+               //let idsource = $("#" + me.pre + "idsource").val();
+               let idsource, pdbsource;
+               if($("#" + me.pre + "type_mmdbid").is(":checked")) {
+                    idsource = 'mmdbid';
+               }
+               else {
+                    idsource = 'afid';
+               }
+               if($("#" + me.pre + "showin_currentpage").is(":checked")) {
+                    pdbsource = 'currentpage';
+                }
+                else {
+                    pdbsource = 'newpage';
+                }
+
+               if(pdbsource == 'currentpage') {
+                    let snp = mutationids;
+
+                    ic.scapCls.retrieveScap(snp);
+                    me.htmlCls.clickMenuCls.setLogCmd('scap 3d ' + snp, true);
+                    me.htmlCls.clickMenuCls.setLogCmd("select displayed set", true);
+               }
+               else {
+                    let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));           
+                    me.htmlCls.clickMenuCls.setLogCmd("3d of mutation " + mutationids, false);
+                    window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap 3d ' + mutationids + '; select displayed set', '_blank');
+               }
             });
 
-            me.myEventCls.onIds("#" + me.pre + "reload_mutation_pdb", "click", function(e) { me.icn3d;
+            me.myEventCls.onIds("#" + me.pre + "reload_mutation_pdb", "click", function(e) { let ic = me.icn3d;
                e.preventDefault();
                if(!me.cfg.notebook) dialog.dialog( "close" );
                let mutationids = $("#" + me.pre + "mutationids").val();
-               let idsource = $("#" + me.pre + "idsource").val();
-               let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
-               me.htmlCls.clickMenuCls.setLogCmd("pdb of mutation " + mutationids, false);
-               //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap pdb ' + mutationids + '; select displayed set', '_blank');
-               window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap pdb ' + mutationids + '; select displayed set', '_blank');
+               //let idsource = $("#" + me.pre + "idsource").val();
+               let idsource, pdbsource;
+               if($("#" + me.pre + "type_mmdbid").is(":checked")) {
+                    idsource = 'mmdbid';
+               }
+               else {
+                    idsource = 'afid';
+               }
+               if($("#" + me.pre + "showin_currentpage").is(":checked")) {
+                    pdbsource = 'currentpage';
+                }
+                else {
+                    pdbsource = 'newpage';
+                }
+
+               if(pdbsource == 'currentpage') {
+                    let snp = mutationids;
+
+                    let bPdb = true;
+                    ic.scapCls.retrieveScap(snp, undefined, bPdb);
+                    me.htmlCls.clickMenuCls.setLogCmd('scap pdb ' + snp, true);
+               }
+               else {
+                    let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
+                    me.htmlCls.clickMenuCls.setLogCmd("pdb of mutation " + mutationids, false);
+                    window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap pdb ' + mutationids + '; select displayed set', '_blank');
+               }
             });
 
             me.myEventCls.onIds("#" + me.pre + "reload_mutation_inter", "click", function(e) { let ic = me.icn3d;
                e.preventDefault();
                if(!me.cfg.notebook) dialog.dialog( "close" );
                let mutationids = $("#" + me.pre + "mutationids").val();
-               let idsource = $("#" + me.pre + "idsource").val();
-
-               let mutationArray = mutationids.split(',');
-               let residArray = [];
-               for(let i = 0, il = mutationArray.length; i < il; ++i) {
-                   let pos = mutationArray[i].lastIndexOf('_');
-                   let resid = mutationArray[i].substr(0, pos);
-                   residArray.push(resid);
+               //let idsource = $("#" + me.pre + "idsource").val();
+               let idsource, pdbsource;
+               if($("#" + me.pre + "type_mmdbid").is(":checked")) {
+                    idsource = 'mmdbid';
                }
-
-               let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
-
-               // if no structures are loaded yet
-               if(!ic.structures) {
-                   ic.structures = {};
-                   ic.structures[mmdbid] = 1;
+               else {
+                    idsource = 'afid';
                }
-               ic.resid2specCls.residueids2spec(residArray);
+               if($("#" + me.pre + "showin_currentpage").is(":checked")) {
+                    pdbsource = 'currentpage';
+                }
+                else {
+                    pdbsource = 'newpage';
+                }
 
-               me.htmlCls.clickMenuCls.setLogCmd("interaction change of mutation " + mutationids, false);
-               //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap interaction ' + mutationids + '; select ' + selectSpec + ' | name test; line graph interaction pairs | selected non-selected | hbonds,salt bridge,interactions,halogen,pi-cation,pi-stacking | false | threshold 3.8 6 4 3.8 6 5.5; adjust dialog dl_linegraph; select displayed set', '_blank');
-               //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?mmdbid=' + mmdbid + '&command=scap interaction ' + mutationids, '_blank');
-               window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap interaction ' + mutationids, '_blank');
+               if(pdbsource == 'currentpage') {
+                    let snp = mutationids;
+
+                    let bInteraction = true;
+                    ic.scapCls.retrieveScap(snp, bInteraction);
+                    me.htmlCls.clickMenuCls.setLogCmd('scap interaction ' + snp, true);
+
+                    let idArray = snp.split('_'); //stru_chain_resi_snp
+                    let select = '.' + idArray[1] + ':' + idArray[2];
+                    let name = 'snp_' + idArray[1] + '_' + idArray[2];
+                    me.htmlCls.clickMenuCls.setLogCmd("select " + select + " | name " + name, true);
+                    me.htmlCls.clickMenuCls.setLogCmd("line graph interaction pairs | selected non-selected | hbonds,salt bridge,interactions,halogen,pi-cation,pi-stacking | false | threshold 3.8 6 4 3.8 6 5.5", true);
+                    me.htmlCls.clickMenuCls.setLogCmd("adjust dialog dl_linegraph", true);
+                    me.htmlCls.clickMenuCls.setLogCmd("select displayed set", true);
+               }
+               else {
+                    let mutationArray = mutationids.split(',');
+                    let residArray = [];
+                    for(let i = 0, il = mutationArray.length; i < il; ++i) {
+                        let pos = mutationArray[i].lastIndexOf('_');
+                        let resid = mutationArray[i].substr(0, pos);
+                        residArray.push(resid);
+                    }
+
+                    let mmdbid = mutationids.substr(0, mutationids.indexOf('_'));
+
+                    // if no structures are loaded yet
+                    if(!ic.structures) {
+                        ic.structures = {};
+                        ic.structures[mmdbid] = 1;
+                    }
+                    ic.resid2specCls.residueids2spec(residArray);
+
+                    me.htmlCls.clickMenuCls.setLogCmd("interaction change of mutation " + mutationids, false);
+                    window.open(hostUrl + '?' + idsource + '=' + mmdbid + '&command=scap interaction ' + mutationids, '_blank');
+               }
             });
 
         //    },
@@ -60776,15 +62190,23 @@ var icn3d = (function (exports) {
              me.myEventCls.onIds("#" + me.pre + "reload_mmdbaf", "click", function(e) { me.icn3d;
                 e.preventDefault();
                 //if(!me.cfg.notebook) dialog.dialog( "close" );
-                me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf1 " + $("#" + me.pre + "mmdbafid").val(), false);
-                window.open(hostUrl + '?mmdbafid=' + $("#" + me.pre + "mmdbafid").val() + '&bu=1', '_blank');
+
+                // remove space
+                let ids = $("#" + me.pre + "mmdbafid").val().replace(/\s+/g, '');
+
+                me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf1 " + ids, false);
+                window.open(hostUrl + '?mmdbafid=' + ids + '&bu=1', '_blank');
             });
      
              me.myEventCls.onIds("#" + me.pre + "reload_mmdbaf_asym", "click", function(e) { me.icn3d;
                  e.preventDefault();
                  //if(!me.cfg.notebook) dialog.dialog( "close" );
-                 me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf0 " + $("#" + me.pre + "mmdbafid").val(), false);
-                 window.open(hostUrl + '?mmdbafid=' + $("#" + me.pre + "mmdbafid").val() + '&bu=0', '_blank');
+
+                 // remove space
+                 let ids = $("#" + me.pre + "mmdbafid").val().replace(/\s+/g, '');
+
+                 me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf0 " + ids, false);
+                 window.open(hostUrl + '?mmdbafid=' + ids + '&bu=0', '_blank');
             });
 
             me.myEventCls.onIds("#" + me.pre + "mmdbid", "keyup", function(e) { me.icn3d;
@@ -60795,6 +62217,15 @@ var icn3d = (function (exports) {
                    window.open(hostUrl + '?mmdbid=' + $("#" + me.pre + "mmdbid").val() + '&bu=0', '_blank');
                   }
             });
+
+            me.myEventCls.onIds("#" + me.pre + "mmdbafid", "keyup", function(e) { me.icn3d;
+                if (e.keyCode === 13) {
+                    e.preventDefault();
+                    //if(!me.cfg.notebook) dialog.dialog( "close" );
+                    me.htmlCls.clickMenuCls.setLogCmd("load mmdbaf0 " + $("#" + me.pre + "mmdbafid").val(), false);
+                    window.open(hostUrl + '?mmdbafid=' + $("#" + me.pre + "mmdbafid").val() + '&bu=0', '_blank');
+                   }
+             });
 
         //    },
         //    clickReload_blast_rep_id: function() {
@@ -60837,6 +62268,14 @@ var icn3d = (function (exports) {
                //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?gi=' + $("#" + me.pre + "gi").val(), '_blank');
                window.open(hostUrl + '?gi=' + $("#" + me.pre + "gi").val(), '_blank');
             });
+
+            me.myEventCls.onIds("#" + me.pre + "reload_refseq", "click", function(e) { me.icn3d;
+                e.preventDefault();
+                if(!me.cfg.notebook) dialog.dialog( "close" );
+                me.htmlCls.clickMenuCls.setLogCmd("load refseq " + $("#" + me.pre + "refseq").val(), false);
+                //window.open(me.htmlCls.baseUrl + 'icn3d/full.html?gi=' + $("#" + me.pre + "gi").val(), '_blank');
+                window.open(hostUrl + '?refseq=' + $("#" + me.pre + "refseq").val(), '_blank');
+             });
 
             me.myEventCls.onIds("#" + me.pre + "gi", "keyup", function(e) { me.icn3d;
                if (e.keyCode === 13) {
@@ -62371,7 +63810,7 @@ var icn3d = (function (exports) {
             //  for(let i in ic.alnChains) {
             for (let m = 0, ml = alignChainArray.length; m < ml; ++m) {
                 let i = alignChainArray[m];
-
+                
                 if (index == 0) firstChainid = i;
 
                 if (bOnechain && index > 0) {
@@ -62565,26 +64004,77 @@ var icn3d = (function (exports) {
             this.icn3dui = icn3dui;
         }
 
-        getLink(id, text) { let me = this.icn3dui; me.icn3d;
+        getLink(id, text, bSimpleMenu, selType) { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.allMenus[id] = text;
+            if(selType) me.htmlCls.allMenusSel[id] = selType;
+            if(bSimpleMenu) me.htmlCls.simpleMenus[id] = 1;
+
             return "<li><span id='" + me.pre + id + "' class='icn3d-link'>" + text + "</span></li>";
         }
 
-        getLinkWrapper(id, text, wrapper) { let me = this.icn3dui; me.icn3d;
-            return "<li id='" + me.pre + wrapper + "'><span id='" + me.pre + id + "' class='icn3d-link'>" + text + "</span></li>";
+        // a group of menus
+        getMenuText(id, text, classname, bSimpleMenu, selType) { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.allMenus[id] = text;
+            if(selType) me.htmlCls.allMenusSel[id] = selType;
+            if(bSimpleMenu) me.htmlCls.simpleMenus[id] = 1;
+
+            let styleStr = (classname == 'icn3d-menupd') ? " style='padding-left:1.5em!important;'" : "";
+
+            // no ending "</li>"" since this is usually the start of a group of menus
+            return "<li><span id='" + me.pre + id + "'" + styleStr + ">" + text + "</span>"; 
         }
 
-        getRadio(radioid, id, text, bChecked) { let me = this.icn3dui; me.icn3d;
+        getMenuUrl(id, url, text, bSimpleMenu, selType) { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.allMenus[id] = text;
+            if(selType) me.htmlCls.allMenusSel[id] = selType;
+            if(bSimpleMenu) me.htmlCls.simpleMenus[id] = 1;
+
+            return "<li><a id='" + me.pre + id + "' href='" + url + "' target='_blank'>" + text + "</a></li>";
+        }
+
+        getMenuSep() { let me = this.icn3dui; me.icn3d;
+            return "<li class='icn3d-menusep'>-</li>";
+        }
+
+        getLinkWrapper(id, text, wrapper, bSimpleMenu, selType, bHide) { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.allMenus[id] = text;
+            if(selType) me.htmlCls.allMenusSel[id] = selType;
+            if(bSimpleMenu) me.htmlCls.simpleMenus[id] = 1;
+
+            let hideStr = (bHide) ? ' style="display:none"' : '';
+            return "<li id='" + me.pre + wrapper + "'" + hideStr + "><span id='" + me.pre + id + "' class='icn3d-link'>" + text + "</span></li>";
+        }
+
+        getLinkWrapper2(id, text, wrapper, bSimpleMenu, selType) { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.allMenus[id] = text;
+            if(selType) me.htmlCls.allMenusSel[id] = selType;
+            if(bSimpleMenu) me.htmlCls.simpleMenus[id] = 1;
+
+            return "<li id='" + me.pre + wrapper + "'><span id='" + me.pre + id + "' class='icn3d-link'>" + text + "</span>";
+        }
+
+        getRadio(radioid, id, text, bChecked, bSimpleMenu, selType) { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.allMenus[id] = text;
+            if(selType) me.htmlCls.allMenusSel[id] = selType;
+            if(bSimpleMenu) me.htmlCls.simpleMenus[id] = 1;
+
             let checkedStr =(bChecked) ? ' checked' : '';
 
             //https://stackoverflow.com/questions/17541614/use-images-instead-of-radio-buttons/17541916
-            return "<li><label for='" + me.pre + id + "' class='icn3d-rad'>" + me.htmlCls.inputRadioStr + "name='" + me.pre + radioid + "' " + "class='" + me.pre + radioid + "' " + "v='" + text + "' id='" + me.pre + id + "'" + checkedStr + "><span class='ui-icon ui-icon-blank'></span> <span class='icn3d-rad-text'>" + text + "</span></label></li>";
+            //return "<li><label for='" + me.pre + id + "' class='icn3d-rad'>" + me.htmlCls.inputRadioStr + "name='" + me.pre + radioid + "' " + "class='" + me.pre + radioid + "' " + "v='" + text + "' id='" + me.pre + id + "'" + checkedStr + "><span class='ui-icon ui-icon-blank'></span> <span class='icn3d-rad-text'>" + text + "</span></label></li>";
+            return "<li><label id='" + me.pre + id + "' class='icn3d-rad'>" + me.htmlCls.inputRadioStr + "name='" + me.pre + radioid + "' " + "class='" + me.pre + radioid + "' " + "v='" + text + "'" + checkedStr + "><span class='ui-icon ui-icon-blank'></span> <span class='icn3d-rad-text'>" + text + "</span></label></li>";
         }
 
-        getRadioColor(radioid, id, text, color, bChecked) { let me = this.icn3dui; me.icn3d;
+        getRadioColor(radioid, id, text, color, bChecked, bSimpleMenu, selType) { let me = this.icn3dui; me.icn3d;
+            me.htmlCls.allMenus[id] = text;
+            if(selType) me.htmlCls.allMenusSel[id] = selType;
+            if(bSimpleMenu) me.htmlCls.simpleMenus[id] = 1;
+
             let checkedStr =(bChecked) ? ' checked' : '';
 
             //https://stackoverflow.com/questions/17541614/use-images-instead-of-radio-buttons/17541916
-            return "<li><label for='" + me.pre + id + "' class='icn3d-rad'>" + me.htmlCls.inputRadioStr + "name='" + me.pre + radioid + "' id='" + me.pre + id + "'" + checkedStr + "><span class='ui-icon ui-icon-blank'></span> <span class='icn3d-color-rad-text' color='" + color + "'><span style='background-color:#" + color + "'>" + me.htmlCls.space3 + "</span> " + text + "</span></label></li>";
+            //return "<li><label for='" + me.pre + id + "' class='icn3d-rad'>" + me.htmlCls.inputRadioStr + "name='" + me.pre + radioid + "' id='" + me.pre + id + "'" + checkedStr + "><span class='ui-icon ui-icon-blank'></span> <span class='icn3d-color-rad-text' color='" + color + "'><span style='background-color:#" + color + "'>" + me.htmlCls.space3 + "</span> " + text + "</span></label></li>";
+            return "<li><label id='" + me.pre + id + "' class='icn3d-rad'>" + me.htmlCls.inputRadioStr + "name='" + me.pre + radioid + "'" + checkedStr + "><span class='ui-icon ui-icon-blank'></span> <span class='icn3d-color-rad-text' color='" + color + "'><span style='background-color:#" + color + "'>" + me.htmlCls.space3 + "</span> " + text + "</span></label></li>";
         }
 
         setAdvanced(index) { let me = this.icn3dui; me.icn3d;
@@ -63481,6 +64971,11 @@ var icn3d = (function (exports) {
         this.opts = {};
         this.opts['background']         = 'black';        //transparent, black, grey, white
 
+        this.allMenus = {};
+        this.allMenusSel= {}; // Selectable menus
+        this.simpleMenus = {};
+        this.shownMenus = {};
+
         this.WIDTH = 400; // total width of view area
         this.HEIGHT = 400; // total height of view area
         this.RESIDUE_WIDTH = 10;  // sequences
@@ -64205,7 +65700,8 @@ var icn3d = (function (exports) {
 
             let  url, dataType;
         
-            url = "https://alphafold.ebi.ac.uk/files/AF-" + afid + "-F1-predicted_aligned_error_v2.json";
+            //url = "https://alphafold.ebi.ac.uk/files/AF-" + afid + "-F1-predicted_aligned_error_v2.json";
+            url = "https://alphafold.ebi.ac.uk/files/AF-" + afid + "-F1-predicted_aligned_error_v3.json";
 
             dataType = "json";
         
@@ -64234,7 +65730,8 @@ var icn3d = (function (exports) {
         processAfErrorMap(dataJson, bFull) { let ic = this.icn3d, me = ic.icn3dui;
             // json format: [{"residue1": [1, ..., 1, ..., n, ..., n], "residue2": [1, 2, ..., n, ..., 1, 2, ..., n], 
             // "distance": [n*n matrix],"max_predicted_aligned_error":31.75}]
-            let distMatrix = dataJson[0].distance;
+            //let distMatrix = dataJson[0].distance; // version 2, one dimension
+            let distMatrix = dataJson[0].predicted_aligned_error; // version 3, two dimensions 
             let max = dataJson[0].max_predicted_aligned_error;
             if(!distMatrix || !max) {
                 alert("The PAE file didn't have the right format...");
@@ -64261,7 +65758,8 @@ var icn3d = (function (exports) {
             //let chainidArray = Object.keys(ic.chains);
             //let chainid = (chainidArray.length == 1) ? chainidArray[0] : 'stru_A';
 
-            let dim = parseInt(Math.sqrt(distMatrix.length));
+            //let dim = parseInt(Math.sqrt(distMatrix.length));
+            let dim = distMatrix.length;
 
             // map index with residue number when the structure has multiple chains
             let index = 0;
@@ -64309,7 +65807,8 @@ var icn3d = (function (exports) {
                     
                     // max dark green color 004d00, 0x4d = 77, 77/255 = 0.302
                     // 0: 004d00, max: FFFFFF
-                    let ratio = (distMatrix[index]) ? distMatrix[index] / max : 0;
+                    //let ratio = (distMatrix[index]) ? distMatrix[index] / max : 0;
+                    let ratio = (distMatrix[i][j]) ? distMatrix[i][j] / max : 0;
                     let r = parseInt(ratio*255).toString(16);
                     let g = parseInt(((1.0 - 0.302)*ratio + 0.302) * 255).toString(16);
                     let rHex = (r.length == 1) ? '0' + r : r;
@@ -65454,6 +66953,1039 @@ var icn3d = (function (exports) {
     }
 
     /**
+     * @author Jiyao Wang <wangjiy@ncbi.nlm.nih.gov> / https://github.com/ncbi/icn3d
+     */
+
+    class Vastplus {
+        constructor(icn3d) {
+            this.icn3d = icn3d;
+        }
+
+        //Load the VAST+ structure alignment for the pair of structures "align", e.g., "align" could be "1HHO,4N7N".
+        // vastplusAtype: 0: VAST, global, 1: VAST, invarant core, 2: TM-align, global
+        vastplusAlign(structArray, vastplusAtype, bRealign) { let ic = this.icn3d; ic.icn3dui;
+            let  thisClass = this;
+
+            // 1. pairwise alignment
+            let  ajaxArray = [], chainidpairArray = [];
+            if(structArray.length != 2) {
+                console.log("VAST+ needs two input structures...");
+                return;
+            }
+
+            let struct1 = structArray[0], struct2 = structArray[1];
+
+            // get protein chains since TM-align doesn't work for nucleotides
+            let chainidArray1 = [], chainidArray2 = [];
+            for(let i = 0, il = ic.structures[struct1].length; i < il; ++i) {
+                let chainid1 = ic.structures[struct1][i];
+                if(!ic.proteins.hasOwnProperty(ic.firstAtomObjCls.getFirstAtomObj(ic.chains[chainid1]).serial)) continue;
+                chainidArray1.push(chainid1);
+            }
+            for(let i = 0, il = ic.structures[struct2].length; i < il; ++i) {
+                let chainid2 = ic.structures[struct2][i];
+                if(!ic.proteins.hasOwnProperty(ic.firstAtomObjCls.getFirstAtomObj(ic.chains[chainid2]).serial)) continue;
+                chainidArray2.push(chainid2);
+            }
+
+            let node2chainindex = {};
+            let node = 0;
+
+            // align A to A, B to B first
+            for(let i = 0, il = chainidArray1.length; i < il; ++i) {
+                let chainid1 = chainidArray1[i];
+                for(let j = 0, jl = chainidArray2.length; j < jl; ++j) {
+                    let chainid2 = chainidArray2[j];
+                    if(i == j) {
+                        let alignAjax = this.setAlignment(struct1, struct2, chainid1, chainid2, bRealign);
+
+                        ajaxArray.push(alignAjax);
+                        chainidpairArray.push(chainid1 + ',' + chainid2);
+                        node2chainindex[node] = [i, j];
+
+                        ++node;
+                    }
+                }
+            }
+
+            for(let i = 0, il = chainidArray1.length; i < il; ++i) {
+                let chainid1 = chainidArray1[i];
+                for(let j = 0, jl = chainidArray2.length; j < jl; ++j) {
+                    let chainid2 = chainidArray2[j];
+                    if(i != j) {
+                        let alignAjax = this.setAlignment(struct1, struct2, chainid1, chainid2, bRealign);
+
+                        ajaxArray.push(alignAjax);
+                        chainidpairArray.push(chainid1 + ',' + chainid2);
+                        node2chainindex[node] = [i, j];
+
+                        ++node;
+                    }
+                }
+            }
+
+            $.when.apply(undefined, ajaxArray).then(function() {
+                let  dataArray = (structArray.length == 1) ? [arguments] : Array.from(arguments);
+                // 2. cluster pairs
+                thisClass.clusterAlignment(dataArray, chainidpairArray, node2chainindex, vastplusAtype);
+
+                // 3. superpose the top selection
+
+                ic.ParserUtilsCls.hideLoading();
+                ic.pdbParserCls.loadPdbDataRender(true);
+
+                if(ic.deferredRealignByVastplus !== undefined) ic.deferredRealignByVastplus.resolve();
+            })
+            .fail(function() {
+                alert("There are some problems in aligning the chains...");
+            });
+        }
+
+        setAlignment(struct1, struct2, chainid1, chainid2, bRealign) { let  ic = this.icn3d, me = ic.icn3dui;
+            let urltmalign = me.htmlCls.baseUrl + "tmalign/tmalign.cgi";
+
+            let sel_t = (bRealign) ? me.hashUtilsCls.intHash(ic.hAtoms, ic.chains[chainid1]) : ic.chains[chainid1];
+            let sel_q = (bRealign) ? me.hashUtilsCls.intHash(ic.hAtoms, ic.chains[chainid2]) : ic.chains[chainid2];
+
+            let pdb_target = ic.saveFileCls.getAtomPDB(sel_t, undefined, undefined, undefined, undefined, struct1);
+            let pdb_query = ic.saveFileCls.getAtomPDB(sel_q, undefined, undefined, undefined, undefined, struct2);
+
+            let alignAjax = $.ajax({
+                url: urltmalign,
+                type: 'POST',
+                data: {'pdb_query': pdb_query, 'pdb_target': pdb_target},
+                dataType: 'jsonp',
+                cache: true
+            });
+
+            return alignAjax;
+        }
+
+        realignOnVastplus() { let  ic = this.icn3d, me = ic.icn3dui;
+            let structHash = [];
+            for(let struct in ic.structures) {
+                let chainidArray = ic.structures[struct];
+                for(let i = 0, il = chainidArray.length; i < il; ++i) {
+                    let chainid = chainidArray[i];
+                    let atoms = me.hashUtilsCls.intHash(ic.hAtoms, ic.chains[chainid]);               
+                    let firstAtom = ic.firstAtomObjCls.getFirstAtomObj(atoms);
+                    structHash[firstAtom.structure] = 1;
+                }
+            }
+
+            let bRealign = true, atype = 2; // VAST+ based on TM-align
+            ic.vastplusCls.vastplusAlign(Object.keys(structHash), atype, bRealign);
+        }
+
+        getResisFromSegs(segArray) { let ic = this.icn3d; ic.icn3dui;
+            let resiArray_t = [], resiArray_q = [];
+            for(let i = 0, il = segArray.length; i < il; ++i) {
+                let  seg = segArray[i];
+                // for(let j = 0; j <= seg.t_end - seg.t_start; ++j) {
+                //     resiArray_t.push(j);
+                // }
+                // for(let j = 0; j <= seg.q_end - seg.q_start; ++j) {
+                //     resiArray_q.push(j);
+                // }
+                resiArray_t.push(seg.t_start + '-' + seg.t_end);
+                resiArray_q.push(seg.q_start + '-' + seg.q_end);
+            }
+
+            return {resiArray_t: resiArray_t, resiArray_q: resiArray_q};
+        }
+
+        clusterAlignment(dataArray, chainidpairArray, node2chainindex, vastplusAtype) { let  ic = this.icn3d, me = ic.icn3dui;
+
+            let queryDataArray = [];
+            for(let index = 0, indexl = chainidpairArray.length; index < indexl; ++index) {
+                let  queryData = dataArray[index][0];
+
+                queryDataArray.push(queryData);
+    /*
+                if(queryData !== undefined && JSON.stringify(queryData).indexOf('Oops there was a problem') === -1
+                    ) {
+                    queryDataArray.push(queryData);
+                }
+                else {
+                    console.log("The alignment data can NOT be retrieved for the pair " + chainidpairArray[index] + "...");
+                    //return;
+                    queryDataArray.push([]);
+                }
+    */            
+            }
+
+            //src/internal/structure/MMDBUpdateTools/Interactions/compbu/comparebuEngine.cpp
+            //  Doing a new comparison; remove any existing results.
+            let m_qpMatrixDist = [];
+
+            let outlier = 1.0, maxDist = 0;
+
+            let bAligned = false;
+            for(let i = 0, il = chainidpairArray.length; i < il; ++i) {
+                let vdist = [];
+                if(queryDataArray[i].length > 0) bAligned = true;
+
+                for(let j = 0, jl = chainidpairArray.length; j < jl; ++j) {
+                    let result = this.RotMatrixTransDist(queryDataArray[i][0], queryDataArray[j][0], outlier, vastplusAtype);
+
+                    // 1.0: not aligned
+                    let dist = (i == j) ? 0.0 : ( (queryDataArray[i].length == 0 || queryDataArray[j].length == 0) ? 1.0 : result);
+                    //if(dist < outlier && dist > maxDist) {
+                    if(dist > maxDist) {
+                        maxDist = dist;
+                    }
+                    vdist.push(dist);                
+                }
+
+                m_qpMatrixDist.push(vdist);
+            }
+
+            if(!bAligned) {
+                alert("These structures can not be aligned...");
+                return;
+            }
+
+            if(maxDist < 1e-6) maxDist = 1;
+
+            // normalize the score matrix
+            for(let i = 0, il = chainidpairArray.length; i < il; ++i) {
+                for(let j = 0, jl = chainidpairArray.length; j < jl; ++j) {
+                    m_qpMatrixDist[i][j] = m_qpMatrixDist[i][j] / maxDist;
+                }
+            }
+            
+            // cluster
+            let threshold = 1.0;
+
+            let bLastTiedValue = false;
+            let m_clusteringResult = this.clusterLinkage(threshold, m_qpMatrixDist, bLastTiedValue);
+
+            let m_buChainMap = this.GetChainMappings(m_clusteringResult, chainidpairArray);
+
+            //  By default, clusters populate m_buChainMap in order of increasing score.
+            let allnodesHash = {};
+            for (let i = 0, il = m_buChainMap.length; i < il; ++i) {
+                let nodeArray = m_buChainMap[i].nodeArray;
+                let allnodes = nodeArray.join(',');
+
+                // use the sum of all pairs
+                // let sum = 0;
+                // for(let j = 0, jl = nodeArray.length; j < jl; ++j) {
+                //     let chainindexArray = node2chainindex[parseInt(nodeArray[j])];
+                //     sum += m_qpMatrixDist[chainindexArray[0]][chainindexArray[1]];
+                // }
+
+                // use the best match
+                let chainindexArray = node2chainindex[parseInt(nodeArray[0])];
+                let sum = m_qpMatrixDist[chainindexArray[0]][chainindexArray[1]];           
+
+                if(!allnodesHash[allnodes]) {
+                    allnodesHash[allnodes] = sum;
+                }
+                else if(sum < allnodesHash[allnodes]) {
+                    allnodesHash[allnodes] = sum;
+                }
+            }
+
+            // sort the hash by value, then sort by key
+            let allnodesArray = Object.keys(allnodesHash).sort((key1, key2) => (allnodesHash[key1] < allnodesHash[key2]) ? -1 : ( (parseInt(10000*allnodesHash[key1]) == parseInt(10000*allnodesHash[key2])) ? ( (key1 < key2) ? -1 : 1 ) : 1 ));
+
+            let badRmsd = parseInt($("#" + me.pre + "maxrmsd").val());
+            if(!badRmsd) badRmsd = 30;
+            
+            bAligned = false;
+
+            for(let i = 0, il = allnodesArray.length; i < il; ++i) {
+                let nodeArray = allnodesArray[i].split(',');
+
+                ic.opts['color'] = 'grey';
+                ic.setColorCls.setColorByOptions(ic.opts, ic.atoms);
+
+                // get the mapped coords
+                let coor_t = [], coor_q = [];
+                let chainid_t, chainid_q;
+                let hAtomsAll = {};
+
+                // reinitialize the alignment
+                $("#" + ic.pre + "dl_sequence2").html('');
+              
+                for(let j = 0, jl = nodeArray.length; j < jl; ++j) {
+                    let node = parseInt(nodeArray[j]);
+                    let segs = queryDataArray[node][0].segs;
+                    let chainidArray = chainidpairArray[node].split(',');
+
+                    chainid_t = chainidArray[0];
+                    chainid_q = chainidArray[1];
+
+                    let resiArrays = this.getResisFromSegs(segs);
+                    let resiArray_t = resiArrays.resiArray_t;
+                    let resiArray_q = resiArrays.resiArray_q;
+
+                    let base = parseInt(ic.chainsSeq[chainid_t][0].resi);
+                    let result_t = ic.realignParserCls.getSeqCoorResid(resiArray_t, chainid_t, base);
+                    coor_t = coor_t.concat(result_t.coor);
+
+                    base = parseInt(ic.chainsSeq[chainid_q][0].resi);
+                    let result_q = ic.realignParserCls.getSeqCoorResid(resiArray_q, chainid_q, base);
+                    coor_q = coor_q.concat(result_q.coor);
+
+                    // align seq 
+                    ic.qt_start_end = [];
+                    ic.qt_start_end.push(segs);
+                    let bVastplus = true, bRealign = true;
+                    let hAtomsTmp = ic.chainalignParserCls.setMsa(chainidArray, bVastplus, bRealign);
+                    hAtomsAll = me.hashUtilsCls.unionHash(hAtomsAll, hAtomsTmp);
+                }
+
+                ic.hAtoms = me.hashUtilsCls.cloneHash(hAtomsAll);
+
+                // ic.opts['color'] = 'identity';
+                // ic.setColorCls.setColorByOptions(ic.opts, ic.hAtoms);
+
+                // align residue by residue
+                let  n =(coor_q.length < coor_t.length) ? coor_q.length : coor_t.length;
+       
+                if(n < 4) continue;
+
+                if(n >= 4) {
+                    ic.rmsd_suprTmp = me.rmsdSuprCls.getRmsdSuprCls(coor_q, coor_t, n);
+         
+                    // superpose
+                    if(ic.rmsd_suprTmp.rot !== undefined) {
+                        let  rot = ic.rmsd_suprTmp.rot;
+                        if(rot[0] === null) continue;
+          
+                        let  centerFrom = ic.rmsd_suprTmp.trans1;
+                        let  centerTo = ic.rmsd_suprTmp.trans2;
+                        let  rmsd = ic.rmsd_suprTmp.rmsd;
+
+                        if(rmsd < badRmsd) {
+                            bAligned = true;
+
+                            me.htmlCls.clickMenuCls.setLogCmd("realignment RMSD: " + rmsd.toPrecision(4), false);
+                            $("#" + ic.pre + "dl_rmsd").html("<br><b>Realignment RMSD</b>: " + rmsd.toPrecision(4) + " &#8491;<br><br>");
+                            if(!me.cfg.bSidebyside) me.htmlCls.dialogCls.openDlg('dl_rmsd', 'Realignment RMSD');
+
+                            // apply matrix for each atom                       
+                            ic.q_rotation = [];
+                            ic.q_trans_sub = [];
+                            ic.t_trans_add = [];
+
+                            ic.q_rotation.push({x1: rot[0], y1: rot[1], z1: rot[2], x2: rot[3], y2: rot[4], z2: rot[5], x3: rot[6], y3: rot[7], z3: rot[8]});
+                            ic.q_trans_sub.push(centerFrom);
+                            ic.t_trans_add.push({x: -centerTo.x, y: -centerTo.y, z: -centerTo.z});
+
+                            me.cfg.aligntool = 'vast'; //!= 'tmalign';
+                            let index = 0, alignType = 'query';
+                            let mmdbid_q = chainid_q.substr(0, chainid_q.indexOf('_'));
+                            let bForce = true;
+                            ic.chainalignParserCls.transformStructure(mmdbid_q, index, alignType, bForce);
+
+                            let chainpairStr = '';
+                            for(let j = 0, jl = nodeArray.length; j < jl; ++j) {
+                                chainpairStr += chainidpairArray[parseInt(nodeArray[j])] + '; ';
+                            }
+                            console.log("Selected the alignment: " + chainpairStr);
+
+                            break;
+                        }
+                        else {
+                            let chainpairStr = '';
+                            for(let j = 0, jl = nodeArray.length; j < jl; ++j) {
+                                chainpairStr += chainidpairArray[parseInt(nodeArray[j])] + '; ';
+                            }
+                            console.log("skipped the alignment: " + chainpairStr);
+                        }
+                    }
+                }
+            }
+
+            if(!bAligned) {
+                alert("These structures can not be aligned...");
+                return;
+            }
+        }
+
+        // src/internal/structure/MMDBUpdateTools/Interactions/compbu/qaAlignment.cpp
+        RotMatrixTransDist(qpa1, qpa2, outlier, vastplusAtype) { let ic = this.icn3d; ic.icn3dui;
+            let cosval = 0.866, lenval = 8.0; 
+
+            if(!qpa1 || !qpa2) return outlier;
+            
+            let rmat1 = this.GetRotMatrix(qpa1, 1.0, vastplusAtype);
+            let rmat2 = this.GetRotMatrix(qpa2, 1.0, vastplusAtype);
+            let tA1 = [], tA2 = [], tB1 = [], tB2 = [];
+            tA1[0] = rmat1[9];  // qpa1.t1x;
+            tA1[1] = rmat1[10]; // qpa1.t1y;
+            tA1[2] = rmat1[11]; // qpa1.t1z;
+            tA2[0] = rmat1[12]; // qpa1.t2x;
+            tA2[1] = rmat1[13]; // qpa1.t2y;
+            tA2[2] = rmat1[14]; // qpa1.t2z;
+            tB1[0] = rmat2[9];  // qpa2.t1x;
+            tB1[1] = rmat2[10]; // qpa2.t1y;
+            tB1[2] = rmat2[11]; // qpa2.t1z;
+            tB2[0] = rmat2[12]; // qpa2.t2x;
+            tB2[1] = rmat2[13]; // qpa2.t2y;
+            tB2[2] = rmat2[14]; // qpa2.t2z;
+            let vecl = [], vecr = [];
+            vecl[0] = tA2[0] - tB2[0];
+            vecl[1] = tA2[1] - tB2[1];
+            vecl[2] = tA2[2] - tB2[2];
+            vecr[0] = tA1[0] - tB1[0];
+            vecr[1] = tA1[1] - tB1[1];
+            vecr[2] = tA1[2] - tB1[2];
+        
+            let sum = 0.0, l1, l2;
+            sum += Math.pow(vecl[0], 2);
+            sum += Math.pow(vecl[1], 2);
+            sum += Math.pow(vecl[2], 2);
+            l1 = Math.sqrt(sum);
+            sum = 0.0;
+            sum += Math.pow(vecr[0], 2);
+            sum += Math.pow(vecr[1], 2);
+            sum += Math.pow(vecr[2], 2);
+            l2 = Math.sqrt(sum);
+
+            // l1 == 0.0 or l2 == 0.0 may occur, if two of the molecules are the same
+            if(vastplusAtype != 2) { // VAST
+                if ((l1 < 1e-10) || (l2 < 1e-10)) {
+                    return outlier;
+                }
+            }
+            else {
+                if (l2 < 1e-10) {
+                    return outlier;
+                }
+            }
+     
+            if (Math.abs(l1 - l2) > lenval) {
+                return outlier;
+            }
+
+            // additional check!
+            let vecr0 = [];
+            vecr0[0] = rmat1[0]*tA1[0] + rmat1[1]*tA1[1] + rmat1[2]*tA1[2];
+            vecr0[1] = rmat1[3]*tA1[0] + rmat1[4]*tA1[1] + rmat1[5]*tA1[2];
+            vecr0[2] = rmat1[6]*tA1[0] + rmat1[7]*tA1[1] + rmat1[8]*tA1[2];
+            vecr0[0] -= rmat1[0]*tB1[0] + rmat1[1]*tB1[1] + rmat1[2]*tB1[2];
+            vecr0[1] -= rmat1[3]*tB1[0] + rmat1[4]*tB1[1] + rmat1[5]*tB1[2];
+            vecr0[2] -= rmat1[6]*tB1[0] + rmat1[7]*tB1[1] + rmat1[8]*tB1[2];
+            let dot0 = 0.0;
+            dot0 = vecl[0]*vecr0[0];
+            dot0 += vecl[1]*vecr0[1];
+            dot0 += vecl[2]*vecr0[2];
+            dot0 /= (l1*l2);
+
+            if (dot0 < cosval) {
+                return outlier;
+            }
+
+            // additional check!
+            vecr0[0] = rmat2[0]*tA1[0] + rmat2[1]*tA1[1] + rmat2[2]*tA1[2];
+            vecr0[1] = rmat2[3]*tA1[0] + rmat2[4]*tA1[1] + rmat2[5]*tA1[2];
+            vecr0[2] = rmat2[6]*tA1[0] + rmat2[7]*tA1[1] + rmat2[8]*tA1[2];
+            vecr0[0] -= rmat2[0]*tB1[0] + rmat2[1]*tB1[1] + rmat2[2]*tB1[2];
+            vecr0[1] -= rmat2[3]*tB1[0] + rmat2[4]*tB1[1] + rmat2[5]*tB1[2];
+            vecr0[2] -= rmat2[6]*tB1[0] + rmat2[7]*tB1[1] + rmat2[8]*tB1[2];
+            dot0 = vecl[0]*vecr0[0];
+            dot0 += vecl[1]*vecr0[1];
+            dot0 += vecl[2]*vecr0[2];
+            dot0 /= (l1*l2);
+
+            if (dot0 < cosval) {
+                return outlier;
+            }
+
+            sum = 0.0;
+            sum += Math.pow(qpa1.q_rotation.x1 - qpa2.q_rotation.x1, 2);
+            sum += Math.pow(qpa1.q_rotation.y1 - qpa2.q_rotation.y1, 2);
+            sum += Math.pow(qpa1.q_rotation.z1 - qpa2.q_rotation.z1, 2);
+            sum += Math.pow(qpa1.q_rotation.x2 - qpa2.q_rotation.x2, 2);
+            sum += Math.pow(qpa1.q_rotation.y2 - qpa2.q_rotation.y2, 2);
+            sum += Math.pow(qpa1.q_rotation.z2 - qpa2.q_rotation.z2, 2);
+            sum += Math.pow(qpa1.q_rotation.x3 - qpa2.q_rotation.x3, 2);
+            sum += Math.pow(qpa1.q_rotation.y3 - qpa2.q_rotation.y3, 2);
+            sum += Math.pow(qpa1.q_rotation.z3 - qpa2.q_rotation.z3, 2);
+       
+            return Math.sqrt(sum);
+        }
+        
+        GetRotMatrix(qpa, scaleFactor, vastplusAtype) { let ic = this.icn3d; ic.icn3dui;
+            let result = [];
+            if (result) {
+                result[0] = qpa.q_rotation.x1 / scaleFactor;
+                result[1] = qpa.q_rotation.y1 / scaleFactor;
+                result[2] = qpa.q_rotation.z1 / scaleFactor;
+                result[3] = qpa.q_rotation.x2 / scaleFactor;
+                result[4] = qpa.q_rotation.y2 / scaleFactor;
+                result[5] = qpa.q_rotation.z2 / scaleFactor;
+                result[6] = qpa.q_rotation.x3 / scaleFactor;
+                result[7] = qpa.q_rotation.y3 / scaleFactor;
+                result[8] = qpa.q_rotation.z3 / scaleFactor;
+                
+                if(vastplusAtype != 2) { // VAST
+                    result[9] = qpa.t_trans_add.x / scaleFactor;
+                    result[10] = qpa.t_trans_add.y / scaleFactor;
+                    result[11] = qpa.t_trans_add.z / scaleFactor;
+                    result[12] = -qpa.q_trans_sub.x / scaleFactor;
+                    result[13] = -qpa.q_trans_sub.y / scaleFactor;
+                    result[14] = -qpa.q_trans_sub.z / scaleFactor;
+                }
+                else {
+                    //TM-align
+                    result[9] = -qpa.q_trans_add.x / scaleFactor;
+                    result[10] = -qpa.q_trans_add.y / scaleFactor;
+                    result[11] = -qpa.q_trans_add.z / scaleFactor;
+                    result[12] = 0;
+                    result[13] = 0;
+                    result[14] = 0;
+                }
+            }
+            
+            return result;
+        }
+
+        cbu_dist( v1, v2, vvDist)  {
+            return (v1 < v2) ?  vvDist[v1][v2] : vvDist[v2][v1];
+        }  
+        
+        compareFloat(cumul, node1, node2 )  {
+            // let v1 = cumul[node1].joinDist;
+            // let v2 = cumul[node2].joinDist;
+            let v1 = cumul[node1].dist;
+            let v2 = cumul[node2].dist;
+
+            if(parseInt(10000 * v1) == parseInt(10000 * v2)) {
+                return 0;
+            }
+            else if(parseInt(10000 * v1) < parseInt(10000 * v2)) {
+                return -1;
+            }
+            else {
+                return 1;
+            }
+        } 
+
+        //  This method has been adapted from the code at:
+        //  src/internal/structure/PubChem/graphicsapi/graphicsapi.cpp
+        // ref: Olson CF, 1995, Parallel algorithms for hierarchical clustering.
+        // http://linkinghub.elsevier.com/retrieve/pii/016781919500017I
+        
+        // single linkage method
+        clusterLinkage(threshold, distmat, bLastTiedValue) { let  ic = this.icn3d, me = ic.icn3dui;
+            let cumul = [];
+        
+            let CBU_ROOT = -1, CBU_TERMINAL = -2;
+
+            let i, j, n = distmat.length;
+
+            let oriNode, selI, selJ, count;
+
+            let distTmp, distPair, maxDist = 2.0;
+
+            for(i = 0; i < 2*n - 1; ++i) {
+                cumul[i] = {};
+                cumul[i].leaves = []; // array of array
+            }
+        
+            // make a matrix to hold the dynamic distance
+            let vvDist = [];
+            for(i = 0; i < 2*n - 1; ++i) {
+                vvDist[i] = [];
+                for(j = 0; j < 2*n - 1; ++j) {
+                    vvDist[i][j] = maxDist;
+                }
+            }
+        
+            for(i = 0; i < n; ++i) {
+                for(j = i; j < n; ++j) {
+                    vvDist[i][j] = distmat[i][j];
+                }
+            }
+
+            // for each curernt nodes, assign its nearest neighbor and the distance
+            let mNearestNB = {}, mNearestNBCopy = {}, mNearestNBDist = {};
+        
+            selI = n;
+            selJ = n;
+            for(i = 0; i < n; ++i) {
+                distTmp = maxDist;
+                for(j = 0; j < n; ++j) {
+                    let bComp = (bLastTiedValue) ? (parseInt(10000 * this.cbu_dist(i, j, vvDist)) <= parseInt(10000 * distTmp)) : (parseInt(10000 * this.cbu_dist(i, j, vvDist)) < parseInt(10000 * distTmp));
+                    if(j != i && bComp) {
+                        distTmp = this.cbu_dist(i, j, vvDist);
+                        selI = i;
+                        selJ = j;
+                    }
+                }
+        
+                mNearestNB[selI] = selJ;
+                mNearestNBDist[selI] = distTmp;
+            }
+
+            let childDist = []; // the distance between its children
+        
+            for(count=0; count < n; ++count){
+                cumul[count].child1     = CBU_TERMINAL;
+                cumul[count].child2     = CBU_TERMINAL;
+                cumul[count].parent     = count;
+                cumul[count].dist       = 0.0;
+                cumul[count].leaves.push([count]);
+                childDist[count]     = 0.0;
+            }
+
+            let structArray = Object.keys(ic.structures);
+            let nChain1 = ic.structures[structArray[0]].length;
+            let nChain2 = ic.structures[structArray[1]].length;
+            let nChain = (nChain1 < nChain2) ? nChain1 : nChain2;
+
+            for(count = n; count < 2*n-1; ++count) {
+                // find the min dist
+                distTmp = maxDist;
+                for(oriNode in mNearestNB) {
+                    distPair = mNearestNBDist[oriNode];
+                    if(distPair < distTmp) {
+                        distTmp = distPair;
+                        selI = oriNode;
+                        selJ = mNearestNB[oriNode];
+                    }
+                }
+
+                let distance = distTmp;
+
+                // update the nodes
+                cumul[count].child1 = (selI < n) ? selI : -selI;
+                cumul[count].child2 = (selJ < n) ? selJ : -selJ;
+                cumul[count].parent = -1 * count;
+
+                // distance of its two children
+                cumul[selI].dist = distance - childDist[selI];
+                cumul[selJ].dist = distance - childDist[selJ];
+                childDist[count] = distance;
+
+                // update the dist matrix for the current one "count"
+                for(j = 0; j < 2*n - 1; ++j) {
+                    let v1 = this.cbu_dist(selI, j, vvDist);
+                    let v2 = this.cbu_dist(selJ, j, vvDist);
+                    if(count < j) vvDist[count][j] = (v1 < v2) ? v1 : v2;
+                    else vvDist[j][count] = (v1 < v2) ? v1 : v2;
+                }
+
+                // assign the connected nodes with maxDist
+                for(j = 0; j < 2*n - 1; ++j) {
+                    if(selI < j) vvDist[selI][j] = maxDist;
+                    else vvDist[j][selI] = maxDist;
+
+                    if(selJ < j) vvDist[selJ][j] = maxDist;
+                    else vvDist[j][selJ] = maxDist;
+                }
+
+                let factor = 4; // 2-4 fold more chains/alignments
+                if(cumul[selI].leaves.length < factor * nChain && cumul[selJ].leaves.length < factor * nChain) {
+                    cumul[count].leaves = [];
+                    
+                    for(let i = 0, il = cumul[selI].leaves.length; i < il; ++i) {
+                        for(let j = 0, jl = cumul[selJ].leaves.length; j < jl; ++j) {
+                            // let nodeI = cumul[selI].leaves[i][0];
+                            // let nodeJ = cumul[selJ].leaves[j][0];
+
+                            // skip non-similar alignments
+                            // if(cumul[selI].dist > threshold) {
+                            //     cumul[count].leaves.push(cumul[selJ].leaves[j]);
+                            // } else if(cumul[selJ].dist > threshold) {
+                            //     cumul[count].leaves = [];
+                            // }
+                            // else {
+                                
+                                // if(this.compareFloat(cumul, nodeI, nodeJ) == 0) {
+                                //     cumul[count].leaves.push(cumul[selI].leaves[i].concat(cumul[selJ].leaves[j]));
+                                //     cumul[count].leaves.push(cumul[selJ].leaves[j].concat(cumul[selI].leaves[i]));
+                                // }
+                                // else if(this.compareFloat(cumul, nodeI, nodeJ) == -1) {
+                                //     cumul[count].leaves.push(cumul[selI].leaves[i].concat(cumul[selJ].leaves[j]));
+                                // }
+                                // else if(this.compareFloat(cumul, nodeI, nodeJ) == 1) {
+                                //     cumul[count].leaves.push(cumul[selJ].leaves[j].concat(cumul[selI].leaves[i]));
+                                // }
+
+                                cumul[count].leaves.push(cumul[selI].leaves[i].concat(cumul[selJ].leaves[j]));
+                                cumul[count].leaves.push(cumul[selJ].leaves[j].concat(cumul[selI].leaves[i]));
+
+                            // }
+                        }
+                    }
+
+                    cumul[selI].leaves = [];
+                    cumul[selJ].leaves = [];
+                }
+                
+                // update mNearestNB and mNearestNBDist
+                delete mNearestNB[selI];
+                delete mNearestNB[selJ];
+
+                delete mNearestNBDist[selI];
+                delete mNearestNBDist[selJ];
+
+                // replace previous node with the new merged one
+                mNearestNBCopy = me.hashUtilsCls.cloneHash(mNearestNB);
+                for(oriNode in mNearestNBCopy) {
+                    if(mNearestNBCopy[oriNode] == selI || mNearestNBCopy[oriNode] == selJ) {
+                        delete mNearestNB[oriNode];
+                        mNearestNB[oriNode] = count;
+                    }
+                }
+
+                // calculate the nearest neighbor of the current node
+                let selNode = 2*n;
+                distTmp = maxDist;
+                for(j = 0; j < 2*n - 1; ++j) {
+                    if(j != count && this.cbu_dist(count, j, vvDist) < distTmp) {
+                        distTmp = this.cbu_dist(count, j, vvDist);
+                        selNode = j;
+                    }
+                }
+
+                mNearestNB[count] = selNode;
+                mNearestNBDist[count] = distTmp;
+            }
+
+            if (count == 2*n - 1) {
+                cumul[count-1].parent = CBU_ROOT;
+                cumul[count-1].dist = 0.0;
+            }
+
+            return cumul;
+        }
+
+        GetChainMappings(m_clusteringResult, chainidpairArray) { let ic = this.icn3d; ic.icn3dui;
+            let mappings = [];
+            chainidpairArray.length;
+            let chain1a, chain2a;
+        
+            let result = this.getClusters(m_clusteringResult, true);
+            //let clusterScores = result.scores;
+            let clusters = result.clusters;
+            let nClusters = clusters.length;
+
+            for(let i = 0; i < nClusters; ++i) {
+                //isClusterOk = true;       
+
+                let leavesArray = clusters[i];        
+                for(let j = 0, jl = leavesArray.length; j < jl; ++j) {
+                    let bucm = {};
+                    //bucm.score = clusterScores[i];
+                    bucm.nodeArray = [];
+      
+                    let chainSet1 = {}, chainSet2 = {};
+
+                    for(let k = 0, kl = leavesArray[j].length; k < kl; ++k) {
+                        let node1 = leavesArray[j][k];
+
+                        // if (node < nQpAligns) {
+                            let chainArray1 = chainidpairArray[node1].split(',');
+                            chain1a = chainArray1[0];
+                            chain2a = chainArray1[1];
+                            
+                            // if (chainSet1.hasOwnProperty(chain1)) continue;
+                            if (chainSet1.hasOwnProperty(chain1a) || chainSet2.hasOwnProperty(chain2a)) continue;
+                            
+                            bucm.nodeArray.push(node1.toString().padStart(5, '0'));
+                
+                            chainSet1[chain1a] = 1;
+                            chainSet2[chain2a] = 1;
+                        // } 
+                        // else {
+                        //     isClusterOk = false;
+                        //     console.log("Skipping cluster");
+                        //     break;
+                        // }
+                    }
+            
+                    //if (isClusterOk) {
+                        mappings.push(bucm);
+                    //}
+                }           
+            }
+            
+            return mappings;
+        }
+        
+        getClusters(tree, includeSingletons) { let ic = this.icn3d; ic.icn3dui;
+            let clusters = [], scores = [];
+            let i = 0, n = tree.length;
+            let minClusterSize = (includeSingletons) ? 0 : 1;
+        
+            for (; i < n; ++i) {
+                if (tree[i].leaves.length > minClusterSize) {
+                    clusters.push(tree[i].leaves);
+                    scores.push(tree[i].dist);
+                }
+            }
+
+            return {"clusters": clusters, "scores": scores};
+        }
+    }
+
+    /**
+     * @author Jiyao Wang <wangjiy@ncbi.nlm.nih.gov> / https://github.com/ncbi/icn3d
+     */
+     
+     class Refnum {
+        constructor(icn3d) {
+            this.icn3d = icn3d;
+        }
+
+        hideIgRefNum() { let ic = this.icn3d; ic.icn3dui;
+            ic.bShowRefnum = false;
+
+            ic.hAtoms = {};
+            ic.bResetAnno = true;
+            ic.showAnnoCls.showAnnotations();
+            ic.hlUpdateCls.updateHlAll();
+        }
+     
+        showIgRefNum() { let ic = this.icn3d, me = ic.icn3dui;
+            let thisClass = this;
+
+            if(Object.keys(ic.resid2refnum).length > 0) {
+                ic.bShowRefnum = true;
+
+                // open sequence view
+                ic.hAtomsRefnum = {};
+                ic.showAnnoCls.showAnnotations();
+                ic.annotationCls.setAnnoViewAndDisplay('detailed view');
+            }
+            else {
+                ic.refpdbArray = ['1bqu_fn3', '1cd8_igv', '1t6v_vnar', '1wio_c2', '1wio_igv', '2atp_a', '2atp_b', '2dm3_iset', '5esv_vh', '5esv_vl', '6al5_cd19', '7bz5_cl1', '7bz5_vh', '7bz5_vl'];
+
+                if(ic.pdbDataArray) {
+                    thisClass.parseRefPdbData(ic.pdbDataArray);
+                }
+                else {
+
+                    let pdbAjaxArray = [];
+                    for(let k = 0, kl = ic.refpdbArray.length; k < kl; ++k) {
+                        let urlpdb = me.htmlCls.baseUrl + "icn3d/refpdb/" + ic.refpdbArray[k] + ".pdb";
+
+                        let pdbAjax = $.ajax({
+                            url: urlpdb,
+                            type: 'GET',
+                            dataType: "text",
+                            cache: true
+                        });
+
+                        pdbAjaxArray.push(pdbAjax);
+                    }
+
+                    $.when.apply(undefined, pdbAjaxArray).then(function() {
+                        ic.pdbDataArray = (pdbAjaxArray.length == 1) ? [arguments] : Array.from(arguments);
+
+                        thisClass.parseRefPdbData(ic.pdbDataArray);
+                    })
+                    .fail(function() {
+                        alert("Error in retrieveing reference PDB data...");
+                        return;
+                    });
+                }
+            }
+        }
+
+        parseRefPdbData(dataArray) { let ic = this.icn3d, me = ic.icn3dui;
+            let thisClass = this;
+
+            let struArray = Object.keys(ic.structures);
+     
+            let ajaxArray = [];
+            let domainidpairArray = [];
+
+            let urltmalign = me.htmlCls.baseUrl + "tmalign/tmalign.cgi";
+
+            ic.resid2domainid = {};
+
+            for(let i = 0, il = struArray.length; i < il; ++i) {
+                let struct = struArray[i];
+                let chainidArray = ic.structures[struct];
+     
+                for(let j = 0, jl = chainidArray.length; j < jl; ++j) {
+                    let chainid = chainidArray[j];
+                    if(!ic.proteins.hasOwnProperty(ic.firstAtomObjCls.getFirstAtomObj(ic.chains[chainid]).serial)) continue;
+                    if(ic.chainsSeq[chainid].length < 50) continue; // peptide
+
+                    // align each 3D domain with reference structure
+                    let result = ic.domain3dCls.c2b_NewSplitChain(ic.chains[chainid]);
+                    let subdomains = result.subdomains;
+
+                    let domainAtomsArray = [];
+
+                    if(subdomains.length <= 1) {
+                        domainAtomsArray.push(ic.chains[chainid]);
+
+                        for(let n = 0, nl = ic.chainsSeq[chainid].length; n < nl; ++n) {
+                            let resid = chainid + '_' + ic.chainsSeq[chainid][n].resi;
+                            ic.resid2domainid[resid] = chainid + '-0';
+                        }             
+                    }
+                    else {
+                        for(let k = 0, kl = subdomains.length; k < kl; ++k) {
+                            let domainAtoms = {};
+                            let segArray = subdomains[k];
+                            for(let m = 0, ml = segArray.length; m < ml; m += 2) {
+                                let startResi = segArray[m];
+                                let endResi = segArray[m+1];
+                                for(let n = parseInt(startResi); n <= parseInt(endResi); ++n) {
+                                    let resid = chainid + '_' + n;
+                                    domainAtoms = me.hashUtilsCls.unionHash(domainAtoms, ic.residues[resid]);
+                                    ic.resid2domainid[resid] = chainid + '-' + k;
+                                }
+                            }
+
+                            domainAtomsArray.push(domainAtoms);
+                        }
+                    }
+
+                    for(let k = 0, kl = domainAtomsArray.length; k < kl; ++k) {
+                        let pdb_target = ic.saveFileCls.getAtomPDB(domainAtomsArray[k], undefined, undefined, undefined, undefined, struct);
+
+                        let domainid = chainid + '-' + k;
+                        for(let index = 0, indexl = dataArray.length; index < indexl; ++index) {
+                            let struct2 = "stru" + index;
+                            let pdb_query = dataArray[index][0];
+
+                            let header = 'HEADER                                                        ' + struct2 + '\n';
+                            pdb_query = header + pdb_query;
+
+                            let alignAjax = $.ajax({
+                                url: urltmalign,
+                                type: 'POST',
+                                data: {'pdb_query': pdb_query, 'pdb_target': pdb_target, "queryid": ic.refpdbArray[index]},
+                                dataType: 'jsonp',
+                                cache: true
+                            });
+
+                            ajaxArray.push(alignAjax);
+                            
+                            domainidpairArray.push(domainid + "," + index);
+                        }
+                    }
+                }
+           }
+
+           //https://stackoverflow.com/questions/14352139/multiple-ajax-calls-from-array-and-handle-callback-when-completed
+           //https://stackoverflow.com/questions/5518181/jquery-deferreds-when-and-the-fail-callback-arguments
+           $.when.apply(undefined, ajaxArray).then(function() {
+               let dataArray =(ajaxArray.length == 1) ? [arguments] : Array.from(arguments);
+               thisClass.parseAlignData(dataArray, domainidpairArray);
+
+               if(ic.deferredRefnum !== undefined) ic.deferredRefnum.resolve();
+           })
+           .fail(function() {
+               console.log("Error in aligning with TM-align...");
+               return;
+           });    
+        }
+
+        parseAlignData(dataArray, domainidpairArray) { let ic = this.icn3d; ic.icn3dui;
+            let  thisClass = this;
+
+            let tmscoreThreshold = 0.4; //0.5;
+
+            // find the best alignment for each chain
+            let domainid2score = {}, domainid2segs = {}, chainid2segs = {};
+            ic.chainid2index = {};
+            ic.domainid2ig2kabat = {};
+            for(let i = 0, il = domainidpairArray.length; i < il; ++i) {
+                let  queryData = dataArray[i][0];
+                if(queryData.length == 0) continue;
+                if(queryData[0].score < tmscoreThreshold || queryData[0].num_res < 50) continue;
+
+                let domainid_index = domainidpairArray[i].split(',');
+                let domainid = domainid_index[0];
+                let chainid = domainid.split('-')[0];
+
+                if(!domainid2score.hasOwnProperty(domainid) || queryData[0].score > domainid2score[domainid]) {
+                    domainid2score[domainid] = queryData[0].score;
+                    ic.chainid2index[chainid] = domainid_index[1]; // could be several, just take the recent one for simplicity
+                    domainid2segs[domainid] = queryData[0].segs;
+                    ic.domainid2ig2kabat[domainid] = queryData[0].ig2kabat;
+                }
+            }
+
+            // combine domainid into chainid
+            for(let domainid in domainid2segs) {
+                let chainid = domainid.split('-')[0];
+                if(!chainid2segs[chainid]) chainid2segs[chainid] = [];
+                chainid2segs[chainid] = chainid2segs[chainid].concat(domainid2segs[domainid]);
+            }
+
+            // assign ic.resid2refnum, ic.refnum2residArray, ic.chainsMapping
+            ic.resid2refnum = {};
+            ic.refnum2residArray = {};
+            ic.chainsMapping = {};
+            for(let chainid in chainid2segs) {
+                let segArray = chainid2segs[chainid];
+    console.log("One of the reference PDBs for chain chainid: " + ic.refpdbArray[ic.chainid2index[chainid]]);
+
+                for(let i = 0, il = segArray.length; i < il; ++i) {
+                    let seg = segArray[i];
+                    let qStartInt = parseInt(seg.q_start);
+                    let postfix = '';
+                    if(isNaN(seg.q_start)) postfix = seg.q_start.substr(seg.q_start.length - 1, 1);
+
+                    for(let j = 0; j <= parseInt(seg.t_end) - parseInt(seg.t_start); ++j) {
+                        let resid = chainid + '_' + (j + parseInt(seg.t_start)).toString();
+                        //let refnum = j + seg.q_start;
+                        let refnum = (j + qStartInt).toString() + postfix;
+
+                        let refnumLabel = thisClass.getLabelFromRefnum(refnum);
+
+                        ic.resid2refnum[resid] = refnumLabel;
+
+                        if(!ic.refnum2residArray.hasOwnProperty(refnum)) {
+                            ic.refnum2residArray[refnum] = [resid];
+                        }
+                        else {
+                            ic.refnum2residArray[refnum].push(resid);
+                        }
+
+                        if(!ic.chainsMapping.hasOwnProperty(chainid)) {
+                            ic.chainsMapping[chainid] = {};
+                        }
+                        ic.chainsMapping[chainid][resid] = refnumLabel;
+                    }
+                }
+            }
+
+            if(Object.keys(ic.resid2refnum).length > 0) {
+                ic.bShowRefnum = true;
+
+                // open sequence view
+                ic.hAtomsRefnum = {};
+                ic.showAnnoCls.showAnnotations();
+                ic.annotationCls.setAnnoViewAndDisplay('detailed view');
+            }
+            else {
+                alert("No Ig reference numbers are assigned based on the reference structures in iCn3D...");
+            }
+        }
+
+        getLabelFromRefnum(oriRefnum) { let ic = this.icn3d; ic.icn3dui;
+            let refnum = parseInt(oriRefnum);
+
+            if(refnum >= 1000 && refnum < 1200) return "A" + oriRefnum;
+            else if(refnum >= 1200 && refnum < 2000) return "A'" + oriRefnum;
+            else if(refnum >= 2000 && refnum < 3000) return "B" + oriRefnum;
+            else if(refnum >= 3000 && refnum < 3200) return "C" + oriRefnum;
+            else if(refnum >= 3200 && refnum < 3700) return "C'" + oriRefnum;
+            else if(refnum >= 3700 && refnum < 4000) return "C''" + oriRefnum;
+            else if(refnum >= 4000 && refnum < 5000) return "D" + oriRefnum;
+            else if(refnum >= 5000 && refnum < 6000) return "E" + oriRefnum;
+            else if(refnum >= 6000 && refnum < 7000) return "F" + oriRefnum;
+            else if(refnum >= 7000 && refnum < 7200) return "G" + oriRefnum;
+            else if(refnum >= 7200 && refnum < 8000) return "G'" + oriRefnum;
+        }
+     }
+
+    /**
      * @author Jack Lin, modified from https://github.com/lh3/bioseq-js/blob/master/bioseq.js
      */
 
@@ -66417,7 +68949,7 @@ var icn3d = (function (exports) {
             if(bWebGL){
                 //https://discourse.threejs.org/t/three-js-r128-ext-frag-depth-and-angle-instanced-arrays-extensions-are-not-supported/26037
                 //this.renderer = new THREE.WebGL1Renderer({
-                if ( bWebGL2 && bVR) { 
+                if ( bWebGL2 && bVR) {                
                     this.renderer = new THREE.WebGLRenderer({
                         canvas: this.oriContainer.get(0), //this.container.get(0),
                         antialias: true,
@@ -66773,6 +69305,7 @@ var icn3d = (function (exports) {
         this.saltbridgeCls = new Saltbridge(this);
 
         this.loadPDBCls = new LoadPDB(this);
+        this.vastplusCls = new Vastplus(this);
         this.transformCls = new Transform(this);
 
         this.setStyleCls = new SetStyle(this);
@@ -66784,6 +69317,7 @@ var icn3d = (function (exports) {
 
         this.annoCddSiteCls = new AnnoCddSite(this);
         this.annoContactCls = new AnnoContact(this);
+        this.annoPTMCls = new AnnoPTM(this);
         this.annoCrossLinkCls = new AnnoCrossLink(this);
         this.annoDomainCls = new AnnoDomain(this);
         this.annoSnpClinVarCls = new AnnoSnpClinVar(this);
@@ -66832,6 +69366,7 @@ var icn3d = (function (exports) {
 
         this.delphiCls = new Delphi(this);
         this.dsspCls = new Dssp(this);
+        this.refnumCls = new Refnum(this);
         this.scapCls = new Scap(this);
         this.symdCls = new Symd(this);
         this.alignSWCls = new AlignSW(this);
@@ -66880,7 +69415,7 @@ var icn3d = (function (exports) {
 
     iCn3D.prototype.init_base = function (bKeepCmd) {
         this.resetConfig();
-
+        
         this.structures = {}; // structure name -> array of chains
         this.chains = {}; // structure_chain name -> atom hash
         this.tddomains = {}; // structure_chain_3d_domain_# name -> residue id hash such as {'structure_chain_3d_domain_1': 1, ...}
@@ -66895,7 +69430,10 @@ var icn3d = (function (exports) {
         this.chainsAnTitle = {}; // structure_chain name -> array of annotation title
 
         this.chainsMapping = {}; // structure_chain name -> residue id hash such as {'structure_chain_resi1': 'reference residue such as K10', ...}
-
+        this.resid2refnum = {}; // residue id -> reference number, e.g.,  {'1WIO_A_16': '2050', ...}
+        this.refnum2residArray = {}; // reference number -> array of residue id, e.g.,  {'2050': ['1WIO_A_16', ...], ...}
+        this.bShowRefnum = false;
+        
         this.alnChainsSeq = {}; // structure_chain name -> array of residue object: {mmdbid, chain, resi, resn, aligned}
         this.alnChainsAnno = {}; // structure_chain name -> array of annotations, such as residue number
         this.alnChainsAnTtl = {}; // structure_chain name -> array of annotation title
@@ -67031,7 +69569,21 @@ var icn3d = (function (exports) {
         }
 
         if(me.cfg.blast_rep_id !== undefined) this.opts['color'] = 'conservation';
-        if(me.cfg.mmdbafid !== undefined) this.opts['color'] = 'structure';
+        if(me.cfg.mmdbafid !== undefined) {
+            let idArray = me.cfg.mmdbafid.split(',');
+            if(idArray.length > 1) {
+                ic.opts['color'] = 'structure';
+            }
+            else if(idArray.length == 1) {
+                let struct = idArray[0];
+                if(isNaN(struct) && struct.length > 5) {
+                    this.opts['color'] = 'confidence';
+                }
+                else {
+                    ic.opts['color'] = 'chain';
+                }
+            }
+        }
 
         if(me.cfg.options !== undefined) $.extend(this.opts, me.cfg.options);
     };
@@ -67048,7 +69600,7 @@ var icn3d = (function (exports) {
         //even when multiple iCn3D viewers are shown together.
         this.pre = this.cfg.divid + "_";
 
-        this.REVISION = '3.13.2';
+        this.REVISION = '3.17.0';
 
         // In nodejs, iCn3D defines "window = {navigator: {}}"
         this.bNode = (Object.keys(window).length < 2) ? true : false;
@@ -67060,7 +69612,7 @@ var icn3d = (function (exports) {
         if(this.cfg.showmenu === undefined) this.cfg.showmenu = true;
         if(this.cfg.showtitle === undefined) this.cfg.showtitle = true;
         if(this.cfg.showcommand === undefined) this.cfg.showcommand = true;
-        if(this.cfg.simplemenu === undefined) this.cfg.simplemenu = false;
+        //if(this.cfg.simplemenu === undefined) this.cfg.simplemenu = false;
         if(this.cfg.mobilemenu === undefined) this.cfg.mobilemenu = false;
         if(this.cfg.closepopup === undefined) this.cfg.closepopup = false;
         if(this.cfg.showanno === undefined) this.cfg.showanno = false;
@@ -67214,6 +69766,10 @@ var icn3d = (function (exports) {
         ic.molTitle = '';
         ic.loadCmd;
 
+        // set menus
+        me.htmlCls.clickMenuCls.getHiddenMenusFromCache();
+        me.htmlCls.clickMenuCls.applyShownMenus();
+
         if(pdbStr) { // input pdbStr
             ic.init();
 
@@ -67308,7 +69864,11 @@ var icn3d = (function (exports) {
            ic.loadCmd = 'load af ' + me.cfg.afid;
            me.htmlCls.clickMenuCls.setLogCmd(ic.loadCmd, true);
            let bAf = true;
-           ic.pdbParserCls.downloadPdb(me.cfg.afid, bAf);
+
+           //ic.pdbParserCls.downloadPdb(me.cfg.afid, bAf);
+           $.when(ic.pdbParserCls.downloadPdb(me.cfg.afid, bAf)).then(function() {
+            ic.loadScriptCls.loadScript(me.cfg.command, undefined, true);
+           });
         }
         else if(me.cfg.opmid !== undefined) {
            ic.inputid = me.cfg.opmid;
@@ -67410,6 +69970,7 @@ var icn3d = (function (exports) {
         }
         else if(me.cfg.cid !== undefined) {
            ic.inputid = me.cfg.cid;
+
            let url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/" + ic.inputid + "/description/jsonp";
            $.ajax({
               url: url,
@@ -67449,9 +70010,16 @@ var icn3d = (function (exports) {
             else if(alignArray.length === 2) {
                 ic.inputid = alignArray[0] + "_" + alignArray[1];
             }
+
             ic.loadCmd = 'load alignment ' + me.cfg.align + ' | parameters ' + me.cfg.inpara;
             me.htmlCls.clickMenuCls.setLogCmd(ic.loadCmd, true);
-            ic.alignParserCls.downloadAlignment(me.cfg.align);
+            if(me.cfg.inpara.indexOf('atype=2') == -1) {
+                ic.alignParserCls.downloadAlignment(me.cfg.align);
+            }
+            else {
+                let vastplusAtype = 2; // Tm-align
+                ic.chainalignParserCls.downloadMmdbAf(me.cfg.align, undefined, vastplusAtype);
+            }
         }
         else if(me.cfg.chainalign !== undefined) {
             ic.bNCBI = true;
@@ -67465,6 +70033,9 @@ var icn3d = (function (exports) {
         else if(me.cfg.mmdbafid !== undefined) {
             ic.bNCBI = true;
 
+            // remove space
+            me.cfg.mmdbafid = me.cfg.mmdbafid.replace(/\s+/g, '');
+
             ic.bMmdbafid = true;
             ic.inputid = me.cfg.mmdbafid;
             if(me.cfg.bu == 1) {
@@ -67475,17 +70046,19 @@ var icn3d = (function (exports) {
             }
             me.htmlCls.clickMenuCls.setLogCmd(ic.loadCmd, true);
 
-            $.when(ic.chainalignParserCls.downloadMmdbAf(me.cfg.mmdbafid)).then(function() {
-                ic.loadScriptCls.loadScript(me.cfg.command);
+            //ic.chainalignParserCls.downloadMmdbAf(me.cfg.mmdbafid);
+            $.when(ic.chainalignParserCls.downloadMmdbAf(me.cfg.mmdbafid)).then(function() {          
+                ic.loadScriptCls.loadScript(me.cfg.command, undefined, true);
             });
         }
         else if(me.cfg.command !== undefined && me.cfg.command !== '') {
             if(me.cfg.command.indexOf('url=') !== -1) ic.bInputUrlfile = true;
-            ic.loadScriptCls.loadScript(me.cfg.command);
+            ic.loadScriptCls.loadScript(me.cfg.command, undefined, true);
         }
         else {
             //alert("Please use the \"File\" menu to retrieve a structure of interest or to display a local file.");
-            me.htmlCls.dialogCls.openDlg('dl_mmdbid', 'Please input MMDB or PDB ID');
+            //me.htmlCls.dialogCls.openDlg('dl_mmdbid', 'Please input MMDB or PDB ID');
+            me.htmlCls.dialogCls.openDlg('dl_mmdbafid', 'Please input PDB/MMDB/AlphaFold UniProt IDs');
         }
       });
       return me.deferred.promise();
@@ -67686,6 +70259,7 @@ var icn3d = (function (exports) {
     exports.ProteinSurface = ProteinSurface;
     exports.Ray = Ray;
     exports.RealignParser = RealignParser;
+    exports.Refnum = Refnum;
     exports.ReprSub = ReprSub;
     exports.Resid2spec = Resid2spec;
     exports.ResidueLabels = ResidueLabels;
@@ -67721,6 +70295,7 @@ var icn3d = (function (exports) {
     exports.Tube = Tube;
     exports.UtilsCls = UtilsCls;
     exports.VRButton = VRButton;
+    exports.Vastplus = Vastplus;
     exports.ViewInterPairs = ViewInterPairs;
     exports.XyzParser = XyzParser;
     exports.iCn3D = iCn3D;

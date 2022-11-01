@@ -59,6 +59,7 @@ import {SetOption} from './display/setOption.js';
     // classes from icn3dui
 import {AnnoCddSite} from './annotations/annoCddSite.js';
 import {AnnoContact} from './annotations/annoContact.js';
+import {AnnoPTM} from './annotations/annoPTM.js';
 import {AnnoCrossLink} from './annotations/annoCrossLink.js';
 import {AnnoDomain} from './annotations/annoDomain.js';
 import {AnnoSnpClinVar} from './annotations/annoSnpClinVar.js';
@@ -99,6 +100,7 @@ import {ParserUtils} from './parsers/parserUtils.js';
 import {LoadAtomData} from './parsers/loadAtomData.js';
 import {SetSeqAlign} from './parsers/setSeqAlign.js';
 import {LoadPDB} from './parsers/loadPDB.js';
+import {Vastplus} from './parsers/vastplus.js';
 
 import {ApplyCommand} from './selection/applyCommand.js';
 import {DefinedSets} from './selection/definedSets.js';
@@ -110,6 +112,7 @@ import {FirstAtomObj} from './selection/firstAtomObj.js';
 
 import {Delphi} from './analysis/delphi.js';
 import {Dssp} from './analysis/dssp.js';
+import {Refnum} from './analysis/refnum.js';
 import {Scap} from './analysis/scap.js';
 import {Symd} from './analysis/symd.js';
 import {AlignSW} from './analysis/alignSW.js';
@@ -188,7 +191,7 @@ class iCn3D {
         if(bWebGL){
             //https://discourse.threejs.org/t/three-js-r128-ext-frag-depth-and-angle-instanced-arrays-extensions-are-not-supported/26037
             //this.renderer = new THREE.WebGL1Renderer({
-            if ( bWebGL2 && bVR) { 
+            if ( bWebGL2 && bVR) {                
                 this.renderer = new THREE.WebGLRenderer({
                     canvas: this.oriContainer.get(0), //this.container.get(0),
                     antialias: true,
@@ -544,6 +547,7 @@ class iCn3D {
     this.saltbridgeCls = new Saltbridge(this);
 
     this.loadPDBCls = new LoadPDB(this);
+    this.vastplusCls = new Vastplus(this);
     this.transformCls = new Transform(this);
 
     this.setStyleCls = new SetStyle(this);
@@ -555,6 +559,7 @@ class iCn3D {
 
     this.annoCddSiteCls = new AnnoCddSite(this);
     this.annoContactCls = new AnnoContact(this);
+    this.annoPTMCls = new AnnoPTM(this);
     this.annoCrossLinkCls = new AnnoCrossLink(this);
     this.annoDomainCls = new AnnoDomain(this);
     this.annoSnpClinVarCls = new AnnoSnpClinVar(this);
@@ -603,6 +608,7 @@ class iCn3D {
 
     this.delphiCls = new Delphi(this);
     this.dsspCls = new Dssp(this);
+    this.refnumCls = new Refnum(this);
     this.scapCls = new Scap(this);
     this.symdCls = new Symd(this);
     this.alignSWCls = new AlignSW(this);
@@ -652,7 +658,7 @@ iCn3D.prototype.init = function (bKeepCmd) {
 
 iCn3D.prototype.init_base = function (bKeepCmd) {
     this.resetConfig();
-
+    
     this.structures = {}; // structure name -> array of chains
     this.chains = {}; // structure_chain name -> atom hash
     this.tddomains = {}; // structure_chain_3d_domain_# name -> residue id hash such as {'structure_chain_3d_domain_1': 1, ...}
@@ -667,7 +673,10 @@ iCn3D.prototype.init_base = function (bKeepCmd) {
     this.chainsAnTitle = {}; // structure_chain name -> array of annotation title
 
     this.chainsMapping = {}; // structure_chain name -> residue id hash such as {'structure_chain_resi1': 'reference residue such as K10', ...}
-
+    this.resid2refnum = {}; // residue id -> reference number, e.g.,  {'1WIO_A_16': '2050', ...}
+    this.refnum2residArray = {}; // reference number -> array of residue id, e.g.,  {'2050': ['1WIO_A_16', ...], ...}
+    this.bShowRefnum = false;
+    
     this.alnChainsSeq = {}; // structure_chain name -> array of residue object: {mmdbid, chain, resi, resn, aligned}
     this.alnChainsAnno = {}; // structure_chain name -> array of annotations, such as residue number
     this.alnChainsAnTtl = {}; // structure_chain name -> array of annotation title
@@ -803,7 +812,21 @@ iCn3D.prototype.resetConfig = function () { let ic = this, me = ic.icn3dui;
     }
 
     if(me.cfg.blast_rep_id !== undefined) this.opts['color'] = 'conservation';
-    if(me.cfg.mmdbafid !== undefined) this.opts['color'] = 'structure';
+    if(me.cfg.mmdbafid !== undefined) {
+        let idArray = me.cfg.mmdbafid.split(',');
+        if(idArray.length > 1) {
+            ic.opts['color'] = 'structure';
+        }
+        else if(idArray.length == 1) {
+            let struct = idArray[0];
+            if(isNaN(struct) && struct.length > 5) {
+                this.opts['color'] = 'confidence';
+            }
+            else {
+                ic.opts['color'] = 'chain';
+            }
+        }
+    }
 
     if(me.cfg.options !== undefined) $.extend(this.opts, me.cfg.options);
 };

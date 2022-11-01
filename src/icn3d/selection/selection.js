@@ -44,8 +44,9 @@ class Selection {
 
         ic.definedSetsCls.setMode('all');
 
-        let  title =(ic.molTitle.length > 40) ? ic.molTitle.substr(0, 40) + "..." : ic.molTitle;
-        $("#" + ic.pre + "title").html(title);
+        //let  title =(ic.molTitle.length > 40) ? ic.molTitle.substr(0, 40) + "..." : ic.molTitle;
+        //$("#" + ic.pre + "title").html(title);
+        ic.saveFileCls.showTitle();
     }
 
     selectAll_base() { let  ic = this.icn3d, me = ic.icn3dui;
@@ -290,9 +291,12 @@ class Selection {
 
     //Show the selection.
     showSelection() { let  ic = this.icn3d, me = ic.icn3dui;
-        ic.dAtoms = {};
+        //ic.dAtoms = {};
 
-        if(Object.keys(ic.hAtoms).length == 0) this.selectAll_base();
+        if(Object.keys(ic.hAtoms).length == 0) {
+            //this.selectAll_base();
+            ic.hAtoms = me.hashUtilsCls.cloneHash(ic.dAtoms);
+        }
 
         ic.dAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);
         ic.viewSelectionAtoms = me.hashUtilsCls.cloneHash(ic.hAtoms);

@@ -210,14 +210,14 @@ class ChainalignParser {
         this.downloadChainalignmentPart3(chainresiCalphaHash2, chainidArray, ic.hAtoms);
     }
 
-    setMsa(chainidArray, bRealign) { let  ic = this.icn3d, me = ic.icn3dui;
+    setMsa(chainidArray, bVastplus, bRealign) { let  ic = this.icn3d, me = ic.icn3dui;
         // get aligned length for each pair
         let index_alignLen = [];
         for(let index = 1, indexl = chainidArray.length; index < indexl; ++index) {
             let alignLen = 0;
             if(ic.qt_start_end && ic.qt_start_end[index - 1]) {
                 for(let i = 0, il = ic.qt_start_end[index - 1].length; i < il; ++i) { 
-                    alignLen += ic.qt_start_end[index - 1][i].q_end - ic.qt_start_end[index - 1][i].q_start + 1;
+                    alignLen += parseInt(ic.qt_start_end[index - 1][i].q_end) - parseInt(ic.qt_start_end[index - 1][i].q_start) + 1;
                 }
             }
             index_alignLen.push({index: index, alignLen: alignLen});
@@ -227,6 +227,11 @@ class ChainalignParser {
         });
 
         let hAtomsAll = ic.setSeqAlignCls.setSeqAlignChainForAll(chainidArray, index_alignLen, bRealign);
+
+        if(bVastplus) {
+            ic.opts['color'] = 'identity';
+            ic.setColorCls.setColorByOptions(ic.opts, hAtomsAll);
+        }
 
         let  bReverse = false;
         let  seqObj = me.htmlCls.alignSeqCls.getAlignSequencesAnnotations(Object.keys(ic.alnChains), undefined, undefined, false, undefined, bReverse);
@@ -380,19 +385,21 @@ class ChainalignParser {
         me.htmlCls.dialogCls.openDlg('dl_alignment', 'Select residues in aligned sequences');
 
         ic.drawCls.draw();
+        ic.transformCls.zoominSelection();
+        
         ic.hlUpdateCls.updateHlAll();
 
         if(ic.deferredRealignByStruct !== undefined) ic.deferredRealignByStruct.resolve();
     }
 
-    transformStructure(mmdbid, index, alignType) { let  ic = this.icn3d, me = ic.icn3dui;
+    transformStructure(mmdbid, index, alignType, bForce) { let  ic = this.icn3d, me = ic.icn3dui;
         let chainidArray = ic.structures[mmdbid];
 
         for(let i = 0, il = chainidArray.length; i < il; ++i) {
             for(let serial in ic.chains[chainidArray[i]]) {
                 let atm = ic.atoms[serial];
                 //if(ic.q_rotation !== undefined && ic.t_trans_add.length > 0 && !me.cfg.resnum && !me.cfg.resdef) {
-                if(ic.q_rotation !== undefined && !me.cfg.resnum && !me.cfg.resdef) {
+                if(ic.q_rotation !== undefined && (bForce || (!me.cfg.resnum && !me.cfg.resdef)) ) {
                     atm = this.transformAtom(atm, index, alignType);
                 }
             }
@@ -503,7 +510,9 @@ class ChainalignParser {
         for(let i = 0, il = chainidArray.length; i < il; ++i) {
             let  chainid = chainidArray[i];
             let  pos = chainid.indexOf('_');
-            let struct = chainid.substr(0, pos).toUpperCase();
+            let struct = chainid.substr(0, pos); 
+            if(struct != 'stru') struct = struct.toUpperCase();
+
             if(!struct2cnt.hasOwnProperty(struct)) {
                 struct2cnt[struct] = 1;
             }
@@ -539,7 +548,7 @@ class ChainalignParser {
 
         let  url_t;
         if(ic.mmdbid_t.length > 5) {
-            url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_t + "-F1-model_v2.pdb";
+            url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_t + "-F1-model_v3.pdb";
 
             targetAjax = $.ajax({
                 url: url_t,
@@ -577,7 +586,7 @@ class ChainalignParser {
 
             let  url_q, queryAjax;
             if(ic.mmdbid_q.length > 5) {
-                url_q = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_q + "-F1-model_v2.pdb";
+                url_q = "https://alphafold.ebi.ac.uk/files/AF-" + ic.mmdbid_q + "-F1-model_v3.pdb";
 
                 queryAjax = $.ajax({
                     url: url_q,
@@ -661,7 +670,7 @@ class ChainalignParser {
         // index = 0: the mmdb data of target
         let  targetData = dataArray[0][0];
         let header = 'HEADER                                                        ' + mmdbid_t + '\n';
-        if(mmdbid_t.length > 5) targetData = header + targetData;
+        if(isNaN(mmdbid_t) && mmdbid_t.length > 5) targetData = header + targetData;
 
         ic.t_trans_add = [];
         ic.q_trans_sub = [];
@@ -683,7 +692,7 @@ class ChainalignParser {
             let  mmdbid_q = chainidArray[index].substr(0, pos).toUpperCase();
 
             let header = 'HEADER                                                        ' + mmdbid_q + '\n';
-            if(mmdbid_q.length > 5) queryData = header + queryData;
+            if(isNaN(mmdbid_q) && mmdbid_q.length > 5) queryData = header + queryData;
 
             if(queryData !== undefined && JSON.stringify(queryData).indexOf('Oops there was a problem') === -1
                 ) {
@@ -868,7 +877,7 @@ class ChainalignParser {
         }
     }
 
-    downloadMmdbAf(idlist, bQuery) { let  ic = this.icn3d, me = ic.icn3dui;
+    downloadMmdbAf(idlist, bQuery, vastplusAtype) { let  ic = this.icn3d, me = ic.icn3dui;
         let  thisClass = this;
 
         ic.deferredMmdbaf = $.Deferred(function() {
@@ -881,7 +890,7 @@ class ChainalignParser {
             let structure = ic.structArray[i];
 
             if(isNaN(structure) && structure.length > 5) {
-                url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.structArray[i] + "-F1-model_v2.pdb";
+                url_t = "https://alphafold.ebi.ac.uk/files/AF-" + ic.structArray[i] + "-F1-model_v3.pdb";
 
                 targetAjax = $.ajax({
                     url: url_t,
@@ -912,8 +921,8 @@ class ChainalignParser {
         //https://stackoverflow.com/questions/5518181/jquery-deferreds-when-and-the-fail-callback-arguments
         $.when.apply(undefined, ajaxArray).then(function() {
           let  dataArray =(ic.structArray.length == 1) ? [arguments] : Array.from(arguments);
-          thisClass.parseMMdbAfData(dataArray, ic.structArray, bQuery);
-          ic.ParserUtilsCls.hideLoading();
+          thisClass.parseMMdbAfData(dataArray, ic.structArray, bQuery, vastplusAtype);
+          if(vastplusAtype === undefined) ic.ParserUtilsCls.hideLoading();
         })
         .fail(function() {
             alert("There are some problems in retrieving the coordinates...");
@@ -923,14 +932,14 @@ class ChainalignParser {
       return ic.deferredMmdbaf.promise();
     }
 
-    parseMMdbAfData(dataArray, structArray, bQuery) { let  ic = this.icn3d, me = ic.icn3dui;
+    parseMMdbAfData(dataArray, structArray, bQuery, vastplusAtype) { let  ic = this.icn3d, me = ic.icn3dui;
         let  thisClass = this;
 
         let queryDataArray = [];
         for(let index = 0, indexl = structArray.length; index < indexl; ++index) {
             let  queryData = dataArray[index][0];
             let header = 'HEADER                                                        ' + structArray[index] + '\n';
-            if(structArray[index].length > 5) queryData = header + queryData;
+            if(isNaN(structArray[index]) && structArray[index].length > 5) queryData = header + queryData;
 
             if(queryData !== undefined && JSON.stringify(queryData).indexOf('Oops there was a problem') === -1
                 ) {
@@ -947,6 +956,8 @@ class ChainalignParser {
         let  hAtoms = {}, hAtomsTmp = {};
         let  bLastQuery = false;
 
+        ic.opts['color'] = (structArray.length > 1) ? 'structure' : ((structArray[0].length > 5) ? 'confidence' : 'chain');
+
         for(let i = 0, il = structArray.length; i < il; ++i) {
             if(i == structArray.length - 1) bLastQuery = true;
 
@@ -959,23 +970,24 @@ class ChainalignParser {
                 targetOrQuery = 'query';
                 bAppend = true; 
             }
-
+            
             //if(structArray[i].length > 4) {
-            if(structArray[i].length > 5) {  // PDB ID plus postfix could be 5 
-                let bNoDssp = true;
+            if(isNaN(structArray[i]) && structArray[i].length > 5) {  // PDB ID plus postfix could be 5 
+                //let bNoDssp = true;
+                let bNoDssp = false; // get secondary structure info
                 hAtomsTmp = ic.pdbParserCls.loadPdbData(queryDataArray[i], structArray[i], false, bAppend, targetOrQuery, bLastQuery, bNoDssp);
             }
-            else {              
+            else {         
                 let bNoSeqalign = true;
                 hAtomsTmp = ic.mmdbParserCls.parseMmdbData(queryDataArray[i], targetOrQuery, undefined, undefined, bLastQuery, bNoSeqalign);
             }
                     
             hAtoms = me.hashUtilsCls.unionHash(hAtoms, hAtomsTmp);
         }
-
+        
         // calculate secondary structures with applyCommandDssp
-        if(bQuery && me.cfg.matchedchains) {
-            $.when(ic.pdbParserCls.applyCommandDssp(true)).then(function() {
+        if(bQuery && me.cfg.matchedchains) {          
+           // $.when(ic.pdbParserCls.applyCommandDssp(true)).then(function() {
                 let bRealign = true, bPredefined = true;
                 ic.realignParserCls.realignChainOnSeqAlign(undefined, ic.chainidArray, bRealign, bPredefined);
                 // reset annotations
@@ -984,10 +996,25 @@ class ChainalignParser {
                 if($('#' + ic.pre + 'dl_selectannotations').dialog( 'isOpen' )) {
                     $('#' + ic.pre + 'dl_selectannotations').dialog( 'close' );
                 }
-           });
+           //});
+        }
+        else if(vastplusAtype !== undefined) {
+            // vastplusAtype: 0: VAST, global, 1: VAST, invarant core, 2: TM-align, global
+            // VAST+ on the fly
+            let structArray = Object.keys(ic.structures);
+            ic.vastplusCls.vastplusAlign(structArray, vastplusAtype);
+
+            //ic.pdbParserCls.loadPdbDataRender(true);
         }
         else {
-            ic.pdbParserCls.applyCommandDssp(true);
+            //ic.pdbParserCls.applyCommandDssp(true);
+        }
+
+        if(Object.keys(ic.structures).length == 1 && me.cfg.mmdbafid.length > 5) {
+            ic.ParserUtilsCls.checkMemProtein(me.cfg.mmdbafid);
+        }
+        else {
+            if(ic.deferredMmdbaf !== undefined) ic.deferredMmdbaf.resolve();
         }
     }
 }

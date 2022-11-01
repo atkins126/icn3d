@@ -12,10 +12,21 @@ class SetDialog {
     }
 
     //A placeholder for all custom dialogs.
-    setCustomDialogs() {var me = this.icn3dui, ic = me.icn3d;
+    setCustomDialogs() { let me = this.icn3dui, ic = me.icn3d;
         if(me.bNode) return '';
 
         let html = "";
+        return html;
+    }
+
+    getHtmlAlignResidueByResidue(chainids, predefinedid, buttonid) { let me = this.icn3dui, ic = me.icn3d;
+        let html = '';
+
+        html += "All chains will be aligned to the first chain in the comma-separated chain IDs. Each chain ID has the form of PDBID_chain (e.g., 1HHO_A, case sensitive) or UniprotID (e.g., P69905 for AlphaFold structures).<br/><br/>";
+        html += "<b>Chain IDs</b>: " + me.htmlCls.inputTextStr + "id='" + me.pre + chainids + "' value='P69905,P01942,1HHO_A' size=50><br/><br/>";
+        
+        html += "Each alignment is defined as \" | \"-separated residue lists in one line. \"10-50\" means a range of residues from 10 to 50.<br><textarea id='" + me.pre + predefinedid + "' rows='5' style='width: 100%; height: " +(me.htmlCls.LOG_HEIGHT) + "px; padding: 0px; border: 0px;'>1,5,10-50 | 1,5,10-50\n2,6,11-51 | 1,5,10-50</textarea><br/>";
+        html += me.htmlCls.buttonStr + buttonid + "'><b>Align Residue by Residue</b></button><br/>";
         return html;
     }
 
@@ -104,25 +115,39 @@ class SetDialog {
 
         html += me.htmlCls.divStr + "dl_vast' class='" + dialogClass + "' style='max-width:500px'>";
         html += 'Note: <b>VAST</b> identifies 3D domains (substructures) within each protein structure in the Molecular Modeling Database (MMDB), and then finds other protein structures that have one or more similar 3D domains, using purely geometric criteria. You have two ways to do a VAST search.<br><br>'; 
-        html += '<b>Optione 1</b>, search with PDB ID and chain name:<br>'; 
+
+        html += '<b>Optione 1</b>, search with your selection (all residues are selected by default) in the loaded structures:<br>'; 
+        html += '<form method=post enctype=multipart/form-data action="https://www.ncbi.nlm.nih.gov/Structure/vast/VSMmdb.cgi" id="' + me.pre + 'newvs2" name="newvs2" target="_blank">';
+        html += '<input type=hidden id="' + me.pre + 'pdbstr" name="pdbstr">';
+        html += "Searching against: <input type='radio' name='dataset' value='Non-redundant subset' checked> Medium-redundancy Subset of PDB <a href='https://www.ncbi.nlm.nih.gov/Structure/VAST/vasthelp.html#VASTNR' title='Medium-redundancy Subset' target='_blank'>?</a> <input type='radio' name='dataset' value='All'>All of PDB <br>";
+        // the submit value has to be "Submit" in order to make the backend cgi works
+        //html += '<input type="submit" name="' + me.pre + 'cmdVSMmdb" value="VAST Search"></input>';
+        html += '<input type="submit" id="' + me.pre + 'cmdVSMmdb2" name="cmdVSMmdb" value="Submit"></input>';
+        html += "</form><br>";
+
+        html += '<b>Optione 2</b>, search with PDB ID and chain name:<br>'; 
         html += "PDB ID: " + me.htmlCls.inputTextStr + "id='" + me.pre + "vastpdbid' value='1HHO' size=8> &nbsp;&nbsp;";
         html += "Chain Name: " + me.htmlCls.inputTextStr + "id='" + me.pre + "vastchainid' value='A' size=8> <br>";
         html += me.htmlCls.buttonStr + "reload_vast'>VAST</button><br><br>";
 
-        html += '<b>Optione 2</b>, search with a PDB file:<br>'; 
-        html += '<form method=post enctype=multipart/form-data action="https://www.ncbi.nlm.nih.gov/Structure/vast/VSMmdb.cgi" name="newvs" target="_blank">';
+        html += '<b>Optione 3</b>, search with a PDB file:<br>'; 
+        html += '<form method=post enctype=multipart/form-data action="https://www.ncbi.nlm.nih.gov/Structure/vast/VSMmdb.cgi" id="' + me.pre + 'newvs" name="newvs" target="_blank">';
         html += "PDB File: " + me.htmlCls.inputFileStr + " name='pdbfile' size=8><br>";
         html += "Searching against: <input type='radio' name='dataset' value='Non-redundant subset' checked> Medium-redundancy Subset of PDB <a href='https://www.ncbi.nlm.nih.gov/Structure/VAST/vasthelp.html#VASTNR' title='Medium-redundancy Subset' target='_blank'>?</a> <input type='radio' name='dataset' value='All'>All of PDB <br>";
         // the submit value has to be "Submit" in order to make the backend cgi works
-        //html += '<input type="submit" name="cmdVSMmdb" value="VAST Search"></input>';
+        //html += '<input type="submit" name="' + me.pre + 'cmdVSMmdb" value="VAST Search"></input>';
         html += '<input type="submit" name="cmdVSMmdb" value="Submit"></input>';
-        html += "</form>";
+        html += "</form><br>";
 
         html += "</div>";
 
         html += me.htmlCls.divStr + "dl_foldseek' class='" + dialogClass + "' style='max-width:500px'>";
-        html += 'Note: You can search similar PDB or AlphaFold structures for any structure at the fast <a href="https://search.foldseek.com/search" target="_blank">Foldseek</a> web server. <br><br>Once you see the structure neighbors, you can view the alignment in iCn3D by inputing a list of chain IDs below. <br><br>The PDB chain IDs are the same as the record names such as "1hho_A". The AlphaFold chain IDs are the UniProt ID plus "_A". For example, the UniProt ID for the record name "AF-P69905-F1-model_v2" is "P69905".<br><br>'; 
-        html += "Chain ID List: " + me.htmlCls.inputTextStr + "id='" + me.pre + "foldseekchainids' value='P69905_A,P01942_A,1HHO_A' size=30> ";
+        html += '1. <input type="submit" id="' + me.pre + 'fssubmit" name="fssubmit" value="Submit"></input> your selection (all residues are selected by default) in the loaded structures to <a href="https://search.foldseek.com/search" target="_blank">Foldseek</a> web server.<br><br>';
+        html += '2 (Optional). Once you see the structure neighbors, you can view the alignment in iCn3D by inputing a list of PDB chain IDs or AlphaFold UniProt IDs below. <br><br>The PDB chain IDs are the same as the record names such as "1hho_A". The UniProt ID is the text between "AF-" and "-F1". For example, the UniProt ID for the record name "AF-P69905-F1-model_v3" is "P69905".<br><br>'; 
+
+        //html += 'Note: You can search similar PDB or AlphaFold structures for any structure at the fast <a href="https://search.foldseek.com/search" target="_blank">Foldseek</a> web server. <br><br>Once you see the structure neighbors, you can view the alignment in iCn3D by inputing a list of PDB chain IDs or AlphaFold UniProt IDs below. <br><br>The PDB chain IDs are the same as the record names such as "1hho_A". The UniProt ID is the text between "AF-" and "-F1". For example, the UniProt ID for the record name "AF-P69905-F1-model_v3" is "P69905".<br><br>'; 
+
+        html += "Chain ID List: " + me.htmlCls.inputTextStr + "id='" + me.pre + "foldseekchainids' value='P69905,P01942,1hho_A' size=30> ";
         html += me.htmlCls.buttonStr + "reload_foldseek'>Align</button>";
         html += "</div>";
 
@@ -140,7 +165,7 @@ class SetDialog {
         html += "Note: AlphaFold produces a per-residue confidence score (pLDDT) between 0 and 100:<br>";
         html += me.htmlCls.clickMenuCls.setAlphaFoldLegend() + "<br>";
 
-        let afid = (me.cfg.afid) ? me.cfg.afid : 'Q76EI6';
+        let afid = (me.cfg.afid) ? me.cfg.afid : 'A4D1S0';
 
         html += "<a href='https://alphafold.ebi.ac.uk/' target='_blank'>AlphaFold Uniprot</a> ID: " + me.htmlCls.inputTextStr + "id='" + me.pre + "afid' value='" + afid + "' size=10><br><br>";
         html += me.htmlCls.buttonStr + "reload_af'>Load Structure</button><br><br>" 
@@ -199,10 +224,11 @@ class SetDialog {
         html += "</div>";
 
         html += me.htmlCls.divStr + "dl_align' class='" + dialogClass + "'>";
-        html += "Enter the PDB IDs or MMDB IDs of two structures that have been found to be similar by <A HREF=' " + me.htmlCls.baseUrl + "vastplus/vastplus.cgi'>VAST+</A> : <br/><br/>ID1: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid1' value='1HHO' size=8>" + me.htmlCls.space3 + me.htmlCls.space3 + "ID2: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid2' value='4N7N' size=8><br/><br/>";
-        html += me.htmlCls.buttonStr + "reload_align_ori'>All Matching Molecules Superposed</button>" + me.htmlCls.space3 + me.htmlCls.buttonStr + "reload_align_refined'>Invariant Substructure Superposed</button>";
+        html += "Enter the PDB IDs or MMDB IDs of the structures: <br/><br/>ID1: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid1' value='1HHO' size=8>" + me.htmlCls.space3 + me.htmlCls.space3 + "ID2: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignid2' value='4N7N' size=8><br/><br/>";
+        html += "<b>VAST+ based on VAST</b>: " + me.htmlCls.buttonStr + "reload_align_ori'>All Matching Molecules Superposed</button>" + me.htmlCls.space3 + me.htmlCls.buttonStr + "reload_align_refined'>Invariant Substructure Superposed</button><br><br>";
+        html += "<b>VAST+ based on TM-align</b>: " + me.htmlCls.buttonStr + "reload_align_tmalign'>All Matching Molecules Superposed</button><br><br>";
         html += "</div>";
-
+        
         html += me.htmlCls.divStr + "dl_alignaf' class='" + dialogClass + "'>";
         html += "Enter two <a href='https://alphafold.ebi.ac.uk/' target='_blank'>AlphaFold Uniprot</a> IDs: <br/><br/>ID1: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignafid1' value='P41327' size=8>" + me.htmlCls.space3 + me.htmlCls.space3 + "ID2: " + me.htmlCls.inputTextStr + "id='" + me.pre + "alignafid2' value='P41331' size=8><br/><br/>";
         html += me.htmlCls.buttonStr + "reload_alignaf_tmalign'>Align with TM-align</button>" + me.htmlCls.buttonStr + "reload_alignaf' style='margin-left:30px'>Align with VAST</button>";
@@ -230,13 +256,14 @@ class SetDialog {
 
         html += me.htmlCls.divStr + "dl_chainalign3' class='" + dialogClass + "'>";
         html += "<div style='width:550px'>";
-        html += "All chains will be aligned to the first chain in the comma-separated chain IDs. Each chain ID has the form of PDBID_chain (e.g., 1HHO_A, case sensitive) or UniprotID (e.g., P69905 for AlphaFold structures).<br/><br/>";
-        html += "<b>Chain IDs</b>: " + me.htmlCls.inputTextStr + "id='" + me.pre + "chainalignids3' value='P69905,P01942,1HHO_A' size=50><br/><br/>";
-        
-        html += "Each alignment is defined as \" | \"-separated residue lists in one line. \"10-50\" means a range of residues from 10 to 50.<br><textarea id='" + me.pre + "predefinedres' rows='5' style='width: 100%; height: " +(me.htmlCls.LOG_HEIGHT) + "px; padding: 0px; border: 0px;'>1,5,10-50 | 1,5,10-50     \n2,6,11-51 | 1,5,10-50</textarea><br/>";
-        html += me.htmlCls.buttonStr + "reload_chainalign_asym3'><b>Align Residue by Residue</b></button><br/><br/>";
+        html += this.getHtmlAlignResidueByResidue('chainalignids3', 'predefinedres', 'reload_chainalign_asym3');
+        html += "</div></div>";
 
-        html += "(Note: To align chains in custom PDB files, you could load them in \"File > Open File > PDB Files (appendable)\" and click \"Analysis > Defined Sets\". Finally select multiple chains in Defined Sets and click \"File > Realign Selection\".)<br><br>";
+        html += me.htmlCls.divStr + "dl_realignresbyres' class='" + dialogClass + "'>";
+        html += "<div style='width:550px'>";
+        html += "<b>Option 1</b>: " + me.htmlCls.buttonStr + "realignSelection'><b>Realign Current Selection Residue by Residue</b></button><br/><br/>";
+        html += "<b>Option 2</b>: <br>";
+        html += "<div class='icn3d-box'>" + this.getHtmlAlignResidueByResidue('chainalignids4', 'predefinedres2', 'reload_chainalign_asym4') + "</div>";
         html += "</div></div>";
 
         html += me.htmlCls.divStr + "dl_mutation' class='" + dialogClass + "'>";
@@ -244,11 +271,19 @@ class SetDialog {
         html += 'Please specify the mutations with a comma separated mutation list. Each mutation can be specified as "[PDB ID or AlphaFold UniProt ID]_[Chain ID]_[Residue Number]_[One Letter Mutatnt Residue]". E.g., the mutation of N501Y in the E chain of PDB 6M0J can be specified as "6M0J_E_501_Y". For AlphaFold structures, the "Chain ID" is "A".<br/><br/>';
         html += "<div style='display:inline-block; width:110px'>Mutations: </div>" + me.htmlCls.inputTextStr + "id='" + me.pre + "mutationids' value='6M0J_E_484_K,6M0J_E_501_Y,6M0J_E_417_N' size=50><br/><br/>";
 
-        html += "<b>Data Source</b>: <select id='" + me.pre + "idsource'>";
-        html += "<option value='mmdbid' selected>PDB ID</option>";
-        html += "<option value='afid'>AlphaFold UniProt ID</option>";
-        html += "</select><br/><br/>";
-        
+        // html += "<b>Data Source</b>: <select id='" + me.pre + "idsource'>";
+        // html += "<option value='mmdbid' selected>PDB ID</option>";
+        // html += "<option value='afid'>AlphaFold UniProt ID</option>";
+        // html += "</select><br/><br/>";
+ 
+        html += '<b>ID Type</b>: ';
+        html += '<input type="radio" name="' + me.pre + 'idsource" id="' + me.pre + 'type_mmdbid" value="mmdbid" checked>PDB ID';
+        html += '<input type="radio" name="' + me.pre + 'idsource" id="' + me.pre + 'type_afid" value="afid" style="margin-left:20px">AlphaFold UniProt ID<br><br>';
+
+        html += '<b>Show Mutation in</b>: ';
+        html += '<input type="radio" name="' + me.pre + 'pdbsource" id="' + me.pre + 'showin_currentpage" value="currentpage">Current Page';
+        html += '<input type="radio" name="' + me.pre + 'pdbsource" id="' + me.pre + 'showin_newpage" value="newpage" style="margin-left:20px" checked>New Page<br><br>';
+
         html += me.htmlCls.buttonStr + "reload_mutation_3d' title='Show the mutations in 3D using the scap program'>3D with scap</button>";
         html += me.htmlCls.buttonStr + "reload_mutation_inter' style='margin-left:20px' title='Show the mutations in 3D and the change of interactions'>Interactions</button>";
         html += me.htmlCls.buttonStr + "reload_mutation_pdb' style='margin-left:20px' title='Show the mutations in 3D and export the PDB of the mutant within 10 angstrom'>PDB</button>";
@@ -310,7 +345,7 @@ class SetDialog {
         html += "</div>";
 
         html += me.htmlCls.divStr + "dl_mmdbafid' class='" + dialogClass + "' style='max-width:500px'>";
-        html += "List of MMDB, PDB, or AlphaFold UniProt IDs: " + me.htmlCls.inputTextStr + "id='" + me.pre + "mmdbafid' value='1HHO,4N7N,P69905,P01942' size=30> <br><br>";
+        html += "List of PDB, MMDB, or AlphaFold UniProt IDs: " + me.htmlCls.inputTextStr + "id='" + me.pre + "mmdbafid' value='1HHO,4N7N,P69905,P01942' size=30> <br><br>";
         html += me.htmlCls.buttonStr + "reload_mmdbaf_asym'>Load Asymmetric Unit (All Chains)</button>" + me.htmlCls.buttonStr + "reload_mmdbaf' style='margin-left:30px'>Load Biological Unit</button><br/><br/><br>";
         html += '<b>Note</b>: The "<b>biological unit</b>" is the <b>biochemically active form of a biomolecule</b>, <div style="width:20px; margin:6px 0 0 20px; display:inline-block;"><span id="'
         + me.pre + 'asu_bu2_expand" class="ui-icon ui-icon-plus icn3d-expand icn3d-link" style="width:15px;" title="Expand"></span><span id="'
@@ -332,7 +367,7 @@ class SetDialog {
         html += "</div>";
 
         html += me.htmlCls.divStr + "dl_yournote' class='" + dialogClass + "'>";
-        html += "Your note will be saved in the HTML file when you click \"File > Save Files > iCn3D PNG Image\".<br><br>";
+        html += "Your note will be saved in the HTML file when you click \"File > Save File > iCn3D PNG Image\".<br><br>";
         html += "<textarea id='" + me.pre + "yournote' rows='5' style='width: 100%; height: " +(me.htmlCls.LOG_HEIGHT) + "px; padding: 0px; border: 0px;' placeholder='Enter your note here'></textarea><br>";
         html += me.htmlCls.buttonStr + "applyyournote'>Save</button>";
         html += "</div>";
@@ -340,6 +375,11 @@ class SetDialog {
         html += me.htmlCls.divStr + "dl_gi' class='" + dialogClass + "'>";
         html += "Protein gi: " + me.htmlCls.inputTextStr + "id='" + me.pre + "gi' value='1310960' size=8> ";
         html += me.htmlCls.buttonStr + "reload_gi'>Load</button>";
+        html += "</div>";
+
+        html += me.htmlCls.divStr + "dl_refseq' class='" + dialogClass + "'>";
+        html += "Protein RefSeq: " + me.htmlCls.inputTextStr + "id='" + me.pre + "refseq' value='0308234A' size=8> ";
+        html += me.htmlCls.buttonStr + "reload_refseq'>Load</button>";
         html += "</div>";
 
         html += me.htmlCls.divStr + "dl_uniprotid' class='" + dialogClass + "'>";
@@ -373,6 +413,11 @@ class SetDialog {
         html += me.htmlCls.divStr + "dl_selection' class='" + dialogClass + "'>";
         html += "Selection file: " + me.htmlCls.inputFileStr + "id='" + me.pre + "selectionfile'><br/>";
         html += me.htmlCls.buttonStr + "reload_selectionfile' style='margin-top: 6px;'>Load</button>";
+        html += "</div>";
+
+        html += me.htmlCls.divStr + "dl_menuloadpref' class='" + dialogClass + "'>";
+        html += "Preference file: " + me.htmlCls.inputFileStr + "id='" + me.pre + "menupreffile'><br/>";
+        html += me.htmlCls.buttonStr + "reload_menupreffile' style='margin-top: 6px;'>Load</button>";
         html += "</div>";
 
         html += me.htmlCls.divStr + "dl_dsn6' class='" + dialogClass + "'>";
@@ -570,18 +615,29 @@ class SetDialog {
 
         html += me.htmlCls.divNowrapStr + "1. Select sets below <br>or use your current selection:</div><br>";
         html += "<div style='text-indent:1.1em'><select id='" + me.pre + "atomsCustomRealign' multiple size='5' style='min-width:130px;'>";
-        html += "</select></div>";
+        html += "</select></div><br>";
 
         html += "<div>2. " + me.htmlCls.buttonStr + "applyRealign'>Realign by Sequence</button></div><br>";
         html += "</div>";
 
         html += me.htmlCls.divStr + "dl_realignbystruct' class='" + dialogClass + "'>";
 
-        html += me.htmlCls.divNowrapStr + "1. Select sets below <br>or use your current selection:</div><br>";
+        html += me.htmlCls.divNowrapStr + "1. Select sets in two chains below <br>or use your current selection:</div><br>";
         html += "<div style='text-indent:1.1em'><select id='" + me.pre + "atomsCustomRealignByStruct' multiple size='5' style='min-width:130px;'>";
-        html += "</select></div>";
+        html += "</select></div><br>";
 
         html += "<div>2. " + me.htmlCls.buttonStr + "applyRealignByStruct_tmalign'>Realign with TM-align</button>" + me.htmlCls.buttonStr + "applyRealignByStruct' style='margin-left:30px'>Realign with VAST</button></div><br>";
+        html += "</div>";
+
+        html += me.htmlCls.divStr + "dl_realigntwostru' class='" + dialogClass + "'>";
+
+        html += me.htmlCls.divNowrapStr + "1. Select sets in two structures below <br>or use your current selection:</div><br>";
+        html += "<div style='text-indent:1.1em'><select id='" + me.pre + "atomsCustomRealignByStruct2' multiple size='5' style='min-width:130px;'>";
+        html += "</select></div><br>";
+
+        html += "2. Overall maximum RMSD: " + me.htmlCls.inputTextStr + "id='" + me.pre + "maxrmsd' value='30' size='2'> &#197; <br><br>";
+
+        html += "<div>3. " + me.htmlCls.buttonStr + "applyRealignByStruct_vastplus'>VAST+ Alignment based on TM-align</button></div><br>";
         html += "</div>";
 
 
@@ -869,6 +925,15 @@ class SetDialog {
         html += me.htmlCls.setHtmlCls.setThicknessHtml('style');
         html += "</div>";
 
+        html += me.htmlCls.divStr + "dl_menupref' class='" + dialogClass + "'>";
+        html += "<b>Note</b>: The following parameters will be saved in cache. You just need to set them once. <br><br>";
+        html += "<div id='" + me.pre + "menulist' style='max-width:500px; max-height:300px; overflow:scroll'></div><br><br>";
+        html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "apply_menupref'>Apply</button></span>";
+        html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "reset_menupref' style='margin-left:30px'>Reset to Simple Menus</button></span>";
+        html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "reset_menupref_all' style='margin-left:30px'>Reset to All Menus</button></span>";
+        html += me.htmlCls.spanNowrapStr + "" + me.htmlCls.buttonStr + "savepref' style='margin-left:30px'>Save Preferences</button></span>";
+        html += "</div>";
+
         html += me.htmlCls.divStr + "dl_addtrack' class='" + dialogClass + "'>";
         html += " <input type='hidden' id='" + me.pre + "track_chainid' value=''>";
 
@@ -1038,7 +1103,7 @@ class SetDialog {
         html += "<button style='white-space:nowrap;' id='" + me.pre + "applycolorbyarea'>Color</button><br/><br/>";
         html += "</div>";
 
-        html += me.htmlCls.divStr + "dl_rmsd' class='" + dialogClass + "'>";
+        html += me.htmlCls.divStr + "dl_rmsd' class='" + dialogClass + "' style='max-width:300px'>";
         
         html += "</div>";
 
@@ -1087,10 +1152,17 @@ class SetDialog {
         html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_custom'>Custom" + me.htmlCls.space2 + "</span></td>";
         html += tmpStr2 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_3dd'>3D Domains" + me.htmlCls.space2 + "</span></td>";
         html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_snp'>SNPs" + me.htmlCls.space2 + "</span></td>";
-        html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_interact'>Interactions" + me.htmlCls.space2 + "</span></td>";
+        
+        // if(me.cfg.mmdbid != undefined || me.cfg.pdbid != undefined || me.cfg.mmtfid != undefined || me.cfg.mmcifid != undefined) { // PDB
+        //     html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_ptm' disabled>PTM (UniProt)" + me.htmlCls.space2 + "</span></td>";
+        // }
+        // else {
+            html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_ptm'>PTM (UniProt)" + me.htmlCls.space2 + "</span></td>";
+        // }
         html += "<td></td>";
         html += "</tr><tr>";
         html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_ssbond'>Disulfide Bonds" + me.htmlCls.space2 + "</span></td>";
+        html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_interact'>Interactions" + me.htmlCls.space2 + "</span></td>";
         html += tmpStr1 + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_crosslink'>Cross-Linkages" + me.htmlCls.space2 + "</span></td>";
         if(me.cfg.opmid !== undefined) {
             html += "<td style='min-width:110px;'><span id='" + me.pre + "anno_transmemli' style='white-space:nowrap'>" + me.htmlCls.inputCheckStr + "id='" + me.pre + "anno_transmem'>Transmembrane" + me.htmlCls.space2 + "</span></td>";

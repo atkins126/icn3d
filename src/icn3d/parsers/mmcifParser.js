@@ -82,7 +82,7 @@ class MmcifParser {
            },
            success: function(data) {
                thisClass.loadMmcifData(data, mmcifid);
-               if(command) ic.loadScriptCls.loadScript(command);
+               //if(command) ic.loadScriptCls.loadScript(command, undefined, true);
            },
            error : function(xhr, textStatus, errorThrown ) {
              this.tryCount++;
@@ -438,7 +438,7 @@ class MmcifParser {
             ic.asuCnt = ic.biomtMatrices.length;
         }
         else {
-            $("#" + ic.pre + "assemblyWrapper").hide();
+            //$("#" + ic.pre + "assemblyWrapper").hide();
         }
 
         ic.setStyleCls.setAtomStyleByOptions(ic.opts);
